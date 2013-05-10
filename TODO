@@ -1,0 +1,6 @@
+* tracepoints for systemtap/dtrace
+* SIGWINCH/SIGHUP to stop/restart worker threads during upgrade
+* hot management interface
+* reduce/minimize memory/stack usage
+* optional fsync/fdatasync/O_SYNC/msync for PUT
+* fallocate support?  slow emulation interfaces can be a problem...

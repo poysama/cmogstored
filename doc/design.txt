@@ -1,0 +1,28 @@
+
+object relationships
+--------------------
+
+1:1 relationship between mog_cfg and mog_svc, we'll support multiple
+mog_svc if they don't conflict.
+
+There's only one mog_queue instance for now, shared by any number of
+mog_svc instances.  Theoretically, there can be any number of mog_queue
+objects, but having one means the fairest distribution in the worst-case
+scenarios (at the cost of optimal performance in the best-case scenario)
+
+
+
+mog_cfg[0] -- mog_svc[0] --- mog_mgmt[N]
+                 |       \-- mog_http[N]
+                 |
+                 |
+                /
+               /         ___ mog_accept[N]
+    mog_queue[0]--------<___ mog_accept[N]
+               \
+                \
+                 |
+                 |
+                 |
+mog_cfg[1] -- mog_svc[1] --- mog_mgmt[M]
+                         \-- mog_http[M]

@@ -1,0 +1,3453 @@
+cmogstored changelog since v0.1.0
+Full changeset information is available at git://bogomips.org/cmogstored.git
+See NEWS file for a user-oriented summary of changes
+
+commit 08b8d7f1e5101631f642134718871dd2ef24c1e5 (HEAD, tag: v1.2.1, master)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-03-04 01:25:09 +0000
+
+    cmogstored 1.2.1 - fix graceful shutdown failure
+    
+    This release only fixes an assertion failure during graceful shutdown
+    while MogileFS fsck is running with checksumming enabled.
+    
+    This only affects users running fsck with checksumming enabled during a
+    graceful shutdown of cmogstored.  For upgrading cmogstored it is
+    recommended to:
+    
+    1) stop fsck on the trackers (via "mogadm fsck stop")
+    2) wait for all tracker queues to drain and stop sending
+       fsck traffic to the affected host.  You may wish to
+       "!want 0 fsck" on all your trackers and wait for the
+       fsck workers to stop.
+    3) upgrade cmogstored (in place upgrade works)
+    
+    There are also several code comment updates for internal
+    components of cmogstored which may interest potential hackers.
+
+commit bc82924e5f26f4d72b145185254f563526adb8f9
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-03-04 01:22:42 +0000
+
+    TODO: add a few item for our roadmap
+    
+    We have a future!
+
+commit f128eea752d51a566996043fd159da9be8d83597 (origin/master)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-03-02 10:56:17 +0000
+
+    alloc: document use of TLS buffers
+    
+    tls_rbuf allows us to avoid nearly all dynamic allocation
+    for common HTTP requests.  However, the mog_rbuf structure
+    may be detached from TLS as necessary (and another one
+    allocated in its place) when the need arises.
+
+commit 20bcb2ccc3d3d38b0fc2f16c25cad74d8404d5bb
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-03-02 10:46:12 +0000
+
+    fdmap: documentation for the FD-based memory allocation
+    
+    Avoiding heap allocations in common paths is important
+    to high performance server design; document this important
+    design decision.
+
+commit adc750ab6600980ba98d77d371efb07b38886f30
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-23 20:41:33 +0000
+
+    mgmt: fix fsck digest assert failure in graceful shutdown
+    
+    Items in the low-priority fsck queue could trigger a assertion failure
+    during graceful shutdown due to improper handling of the MOG_NEXT_IGNORE
+    state in mog_mgmt_quit_step().
+    
+    However, using the fsck queue in graceful shutdown (which is
+    single-threaded) is probably a bad idea anyways, as the fsck digest
+    could monopolize other requests.  So give no special handling to fsck
+    digest queries during graceful shutdown.
+    
+    This only affects users running fsck with checksumming enabled during a
+    graceful shutdown of cmogstored.  For checksums users, it is recommended
+    to stop fsck from the trackers and wait for all tracker queues to drain
+    before upgrading cmogstored (and using graceful shutdown on the old
+    cmogstored).
+
+commit 8757c6458e67e9ab20f9a049a9a68f51b3229816
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-23 01:17:09 +0000
+
+    http_get: comment about snprintf() being a hot spot
+    
+    cmogstored is pretty fast, but it could be faster.
+
+commit c81abd17fbbbb37c4df13771b485e139c8ab71d9
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-21 03:32:07 +0000
+
+    queue_common: update comments to match code
+    
+    While we're at it, explain the use of cloexec.
+
+commit f57064cc07d872583f50a04b2421f214304cc483 (tag: v1.2.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-18 23:37:17 +0000
+
+    document/reserve SIGWINCH/SIGHUP for future use
+    
+    Despite having an extensive test suite and minimal room for user
+    error, giving users the options to back out of a hot upgrade may
+    be worth supporting.
+
+commit cbab5b9d18f13c22f6d94bdad2490e8d280ea927
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-18 23:30:30 +0000
+
+    copyright comment updates for 2013 (part 2)
+    
+    Many files were missed the first time around in
+    commit 37026af96dec638aa850d604003bf7218d90037d
+
+commit d7a6fe7d93c2e7c771e99f7083d2a59d320da12f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-18 23:27:13 +0000
+
+    manpage: document SIGUSR2 upgrades
+    
+    This is a new feature and needs to be documented.
+
+commit f5a6eb5faa0459d6ec4ac9255c0f24d4dbe73583
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-18 12:18:55 +0000
+
+    move cmogstored_exit() prototype to cmogstored.h
+    
+    This fixes a missing prototype warning for cmogstored_exit()
+    when checking exit.c with sparse.
+
+commit 56cb260ed21561c2b84c1ca5dec8b25c738343c8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-18 05:46:47 +0000
+
+    queue_epoll: fix bad cast for epoll.event
+    
+    The events field of struct epoll_event is a uint32_t, not int.
+
+commit 43d893ac7043ca69f2e93b987856e22cfa4a3978
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-18 05:46:46 +0000
+
+    tests: add valgrind supp for epoll_ctl on 32-bit arch
+    
+    The epoll_event.data union is 64-bits on 32-bit systems while
+    pointers are 32-bit.  We only use 32-bits of that union, but
+    valgrind mistakenly complains about it (the kernel does not
+    care about the user-supplied data union at all).
+
+commit 92b8a2091414c0024fe9fd35aed6891308c9dc26
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-18 05:46:45 +0000
+
+    ioutil: fix memory access error on from mog_iou_write
+    
+    sizeof(buf) returns the size of the pointer if buf is a passed
+    parameter, even if it the function prototype dictates a fixed
+    size for buf as we do in mog_iou_write.  While we're at it,
+    make our mog_iou_write buf parameter const.
+    
+    This bug was introduced in:
+    commit a960a351b2248a196c91cdbf6256f98e1bc2ef37
+    "split iostat util% tracking from mountlist"
+    and never affected an official release of cmogstored.
+    
+    This bug was caught while testing on a 32-bit GNU/Linux machine.
+    My normal 32-bit FreeBSD 9.0 environment did not catch this as
+    iostat on that platform only reports integer percentages and
+    does not need more than 4 bytes.
+
+commit 719e4fc320e1978bc9ea6ee8be9f8249dcb54dab (next)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-16 12:55:42 +0000
+
+    handle pthread_create returning ENOMEM on old glibc
+    
+    Older glibc will return ENOMEM on mprotect() failures.  This bug
+    was only fixed in 2011, so the long-term distros and old
+    installations may not have the necessary backports.
+    
+    ref: http://www.sourceware.org/bugzilla/show_bug.cgi?id=386
+
+commit 13cbdcea65248271668562064aafdcc9634ef9ce
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-15 11:04:55 +0000
+
+    graceful handling of pthread_create EAGAIN failure
+    
+    pthread_create may return EAGAIN as a temporary failure,
+    do not abort a running process if this is the case.
+    
+    For the initial mountlist scan, we must retry indefinitely for
+    cmogstored to be usable.  However, with our thread pools, we can
+    always run fewer threads (as long as there is at least one
+    thread per-pool).
+
+commit fcb41385271818586a162d02aeb23bc3414a602e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-15 09:27:13 +0000
+
+    test/http_idle_expire: hopefully improve test reliability
+    
+    This is a tricky test and doesn't always succeed, since
+    it's hard to tell how many file descriptors glibc will
+    use internally.
+
+commit 476cc380a94db3355f818b2c798cdeeb0c626cc0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-15 02:54:20 +0000
+
+    sig: avoid pselect if ppoll is present in mog_sleep
+    
+    We want to favor ppoll over pselect, since ppoll is a better
+    interface and we can have a slightly smaller binary with fewer
+    dependencies.
+    
+    While we're at it, use mog_sleep(-1) as an alias for
+    mog_selfwake_wait to further reduce binary size.
+
+commit b7403080f0266ac41cecae80adcfa0391f3f93b7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-15 02:43:51 +0000
+
+    avoid racy sleep on fork failure in master process
+    
+    We need to atomically enable interrupts and sleep with
+    the same syscall.  Fortunately, using pselect (through
+    mog_sleep) allows that and is POSIX-compliant, so use
+    that.
+
+commit 5629899a12649b9b21f41efc29b92adbd82afe6c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-15 02:40:50 +0000
+
+    mnt: inform user of slow mountlist scan
+    
+    This will inform the user of why cmogstored may be slow
+    to start, since we need the mountlist to be populated at
+    startup.
+    
+    We also throw a pthread_cancel() in there to load libgcc_s under
+    glibc, so we can avoid loading libgcc_s once we're under FD pressure.
+    This makes test/http_idle_expire.rb more reliable.
+
+commit 44f4f76d06899b1a0e4719671a4fde3c0851764a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-14 11:32:11 +0000
+
+    test/http_range: do not allow webrick to perform lookups
+    
+    DNS lookups cause webrick tests to fail or timeout.  Our
+    tests should not have external network dependencies.
+
+commit cfe689f85b0b39d1f3b3e21d9b564d34b2146d88
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-14 10:26:17 +0000
+
+    inherit: avoid DNS lookup on upgrade
+    
+    A typo caused unnecessary DNS lookups when inheriting sockets.
+    While we're at it, fix another typo in the error message, too.
+
+commit f8b30b2846c25461940c99d8fd4432ec49920098
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-14 05:21:27 +0000
+
+    selfwake: use epoll_pwait on Linux instead of eventfd
+    
+    This saves us a file descriptor in Linux, which provides
+    epoll_pwait in 2.6.19+ (and ppoll for 2.6.18, the oldest
+    kernel we support).
+
+commit 4ccf06a600ce31c6dbd61d9c44b491233758c18b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-11 09:48:20 +0000
+
+    mnt: revert to mutex for protecting by_dev hash
+    
+    Since we now update future copies of by_dev offline and only
+    need a lock to swap in the new one, contention for by_dev should
+    be less of a problem than it was before.  This should make
+    reader-writer locks an unnecessary risk.
+    
+    Reader-writer locks are riskier since writer starvation can
+    potentially be an issue with many readers.
+
+commit f54e27e0ec0a520c0a079d6e8428eeefdcd366ab
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-11 02:07:41 +0000
+
+    test/mogilefs_integration: increase test reliability
+    
+    Use SO_REUSEADDR, since Linux requires both the new program
+    (cmogstored) and this test both use SO_REUSEADDR for
+    SO_REUSEADDR to be effective.
+    
+    Also, minimize the window for port conflicts.  While there are
+    hard-to-avoid race windows for conflicts when binding random
+    ports, we can minimize those windows by holding those ports open
+    in the parent as long as possible.
+
+commit 384c801cced851e782cbe94b548a31b1deaa70f3
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-11 01:25:16 +0000
+
+    kqueue: update NOTIFYRD -> SELFWAKE
+    
+    This was missed in the earlier changes to allow eventfd
+    usage under Linux instead of using an notification pipe.
+
+commit ba24aa82b1c9306e0053089296741f028fafa148
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-11 00:51:06 +0000
+
+    fix signal races when master process is used
+    
+    In the absence of a pselect/ppoll-like version of waitpid;
+    we must use a selfwake descriptor (pipe or eventfd) to
+    wake the master up whenever a signal is received.
+    
+    So wait on the selfwake descriptor and always run waitpid
+    with WNOHANG in a loop to ensure all children are reaped.
+    
+    The: mog_intr_disable(); waitpid(); mog_intr_enable()
+    sequence was completely stupid I can't believe I wrote it.
+
+commit 5537c96848f483d403da1ed663809681e7b09f3b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-10 11:37:34 +0000
+
+    allow self-wakeup to use eventfd under modern Linux
+    
+    eventfd uses fewer resources than a pipe, so create less
+    overhead for our users by using eventfd instead of a pipe.
+
+commit 955991aae8c3da5a13e34e929188db3fd9216a0e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-10 23:17:41 +0000
+
+    pidfile: delay unlink of old file on aborted upgrades
+    
+    We don't want to be without any pidfile if writing the new
+    pidfile fails.
+
+commit 975a329912818b49f04de15349f6414719430808
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-10 20:39:56 +0000
+
+    upgrade: do not disable interrupts in forked child
+    
+    The child disables interrupts right away, so there's no
+    reason to enable interrupts temporarily.
+
+commit 2163a4c6f09a9813a0e69a9533923623d448dce9
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-09 23:09:14 +0000
+
+    test/upgrade: more thorough PID file checking
+    
+    We need to ensure the PID file is non-empty, not just
+    that it exists.
+
+commit 7d56b023d2aac8530b249b2db7d90a738297a6fc
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-09 23:06:41 +0000
+
+    prioritize upgrade before exit in main loop
+    
+    If we receive both SIGUSR2 and SIGQUIT in a short
+    time period; we should trigger the upgrade before
+    gsince raceful exit; as no user will (intentionally) send
+    SIGQUIT before SIGUSR2.
+
+commit 3f454ae96e7cc1352f7bf7756a064cf5781154c4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-09 23:05:23 +0000
+
+    test/upgrade: teardown more careful about killing
+    
+    We don't want to accidentally kill ourselves by targeting
+    PID=0 if the PID file is empty.
+
+commit b96d1018ae5261d8ee9344b959acb04c1be43279
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-09 07:04:13 +0000
+
+    tests: fix several Ruby warnings
+    
+    Unused variables and unset Content-Type for Net::HTTP requests
+
+commit 7d740e5825e05030b5978ed296fd0b801666b405
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-09 07:03:02 +0000
+
+    test/inherit: fix Ruby 2.0.0 close-on-exec compatibility
+    
+    FD inheritance from exec() must be done explicitly in Ruby 2.0
+
+commit e427fb773837953c01ebe8dfaf8f8679c7895fc2
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-08 08:48:36 +0000
+
+    mnt: move stat/lstat logic to mnt_usable
+    
+    This centralizes the mountpoint suitability logic in
+    one place.  In the future, it may also allow us to
+    parallelize the work of scanning filesystems.
+
+commit 223adf17682765f9e72d3436348700085d823a6e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-08 03:02:18 +0000
+
+    upgrade: fix env placeholder for valgrind
+    
+    Having a NULL at the beginning of the list caused
+    iteration in the destructor to stop, allowing valgrind
+    to detect a memory leak.
+
+commit d8ac1b937647b86342135a91abe933a3f8812909
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-08 02:54:54 +0000
+
+    cfg: require PATH to be set for --daemonize
+    
+    Maybe some weird users do not have PATH
+
+commit bd37ad7bfae8c9b25a9eef1e1ce9b7c17d1f5257
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-08 02:27:03 +0000
+
+    upgrade: avoid non-async-safe functions in child
+    
+    execvp may malloc internally in its path lookup, so use
+    find_in_path to perform this lookup in the parent instead.
+    Additionally, putenv() may not be async-signal-safe either,
+    but execve is, so use execve.
+
+commit 117a11e9e2b8a365df90336ae78b61f6562b7bd3
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-07 22:02:41 +0000
+
+    cfg: disallow trailing ':' in PATH with daemonize
+    
+    Trailing ':' in PATH means using the current path, which
+    is now incompatible with daemonize.
+
+commit 4f45f562180489a97a4572ebd3822e9f15289bd6
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-07 20:29:47 +0000
+
+    upgrade: avoid potential deadlock from post-fork mutex use
+    
+    Pthreads implementations do not require mutexes be in a
+    consistent/usable state in a forked child
+    Since we don't need the mutex in a single-threaded forked
+    child, we can just skip it and avoid reinitializing it
+    entirely.
+
+commit 315487f70c90b117aa4e9d63bbb21abae8af80ab
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-07 19:50:49 +0000
+
+    rename fs_usable to mnt_usable
+    
+    It should be clearer this code is only called from inside
+    mnt.c and not fs.c (the latter is for general filesystem
+    operations, not operations on a mount point).
+
+commit c3550946c61a43cad54f1aa7c0f0f062a451042f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-07 11:00:10 +0000
+
+    release memory allocated for upgrade at exit
+    
+    This is not strictly necessary as this memory is freed anyways,
+    but stop valgrind from complaining and avoid unnecessary
+    suppressions (since shutdown performance is not important).
+
+commit 03bf577eb3a328f130083d992b180ba72ee1f0b4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-07 08:36:47 +0000
+
+    forbid relative paths with daemonization
+    
+    Relative paths are incompatible with daemonization, as it
+    does not work for SIGUSR2 upgrades (since daemonize forces
+    the server to run in "/").  Relative paths are confusing
+    and error-prone anyways, so do not allow users to specify
+    them along with --daemonize.
+
+commit 5b7d2608f95332c3bcd69d1eb56044236fc6b978
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-07 09:30:17 +0000
+
+    omit trailing newline from die() and warn() calls
+    
+    The GNU error() function already emits a newline at
+    the end of these messages.
+
+commit 9510a1d244e22725e2710d04571e3d6fbf89b0e8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-07 09:33:37 +0000
+
+    favor error.h GNU system header over gnulib one
+    
+    error.h is available on GNU/Linux (and presumably GNU/kFreeBSD
+    and GNU/Hurd, so favor that system-wide header over the gnulib
+    one.
+
+commit 26432ee7d0cf7f94fdc62804611cdbc7c5ec960c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-06 02:44:05 +0000
+
+    remove warn module and alias it to error() in gnulib
+    
+    There is no need to maintain our own code for this.
+
+commit 930da6932ae96b3c5f40324b9f24fc6415f3e500
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-02-06 02:42:58 +0000
+
+    queue_epoll: change fprintf(stderr, ...) to use warn()
+    
+    This makes it easier alter how/if we write to stderr.
+
+commit 7abd078c4f7e61e87f9394c6662be027fe0253b2
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-31 23:10:50 +0000
+
+    ioutil: avoid assigned but unused variable
+    
+    Noticed with gcc 4.7.2 in Debian testing (4.7.2-5)
+
+commit c0931fd23e065521237530cd6f9f6068f259e4e1
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-31 06:47:41 +0000
+
+    cmogstored: initialize syslog before inheriting
+    
+    This ensures the: inherited $ADDRESS:$PORT on fd=...
+    messages are prefixed with the PID in logs.
+
+commit 459d163514766653d28d8964a7e2e25d27f7c873
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-31 06:46:39 +0000
+
+    cfg: daemonize is a boolean, not an integer
+    
+    This project uses C99 features (and some GNU extensions),
+    so bool is usable.
+
+commit dffe6b3dc226cafb0a6107443f9d7e23095dd789
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-31 04:20:35 +0000
+
+    sockaddr*-related data structure size reductions
+    
+    We do not need all the weight of sockaddr_storage or NI_MAXHOST.
+    cmogstored currently only supports IPv4 and IPv6[1] and (like
+    any respectable server) will not perform reverse DNS lookups.
+    
+    This allows us to reduce our stack usage in some places and
+    keep caches hotter.
+    
+    [1] MogileFS does not support IPv6, yet, even
+
+commit d68b0ad231192c6ccf701e66be66b6bc956bed2b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-31 03:52:20 +0000
+
+    minimize interrupt windows for master process
+    
+    Code is easier to follow when interrupts occur at well-defined
+    points.  The worker processes (and master-less standalone) already
+    follows this.
+
+commit 088138b235e79fa54a4e3602a4d60975e9581571
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-30 02:55:29 +0000
+
+    implement nginx-style binary upgrade via SIGUSR2
+    
+    USR2 now forks a new cmogstored process which inherits
+    listener file descriptors from the parent.  The parent
+    renames its pidfile with a ".oldbin" suffix so the new
+    child can use the new PID file.
+    
+    Clusters may now upgrade to future versions of cmogstored
+    without needing to mark hosts down via mogadm.
+    
+    The behavior of this process should match that of nginx:
+    http://wiki.nginx.org/CommandLine#Upgrading_To_a_New_Binary_On_The_Fly
+
+commit 2b252bb6b4704be01d629194aff588b24d579cdd
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-26 00:19:59 +0000
+
+    refactor process management
+    
+    To support transparent upgrades, we need to be able to reap
+    child processes regardless of what the child process was.  So we
+    must do away with the iostat/worker-specifc waitpid() calls and
+    use waitpid(-1) to cast a wide net to reap anything and
+    everything.
+    
+    When we support transparent upgrades, the fork+exec-ed child
+    process may die, so the main process (master if
+    --worker-processes are used) needs to be capable of reaping
+    that new process.
+
+commit e292e0e874a064fcd39f76565f38935449b7f7c8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-24 12:26:47 +0000
+
+    inherit: preliminary FD inheritance over exec()
+    
+    This lets us inherit listen sockets from the parent
+    process, in the future this will allow transparent
+    upgrades.
+
+commit 80aef1b3c8e9a20ec047dcf040e594a5e2a23811
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-24 03:28:51 +0000
+
+    move graceful exit functionality into its own file
+    
+    No need to clutter up the main file with graceful exit
+    functionality.
+
+commit 25d7a82d9851c204e6ca47ab8af35fdab9bbd37c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-24 03:21:05 +0000
+
+    move pidfile preparation function out
+    
+    cmogstored.c is too big, we can move pidfile functionality
+    out to pidfile.c easily.
+
+commit 852ca09524c17dc15ab68a1f85cee008c22a3a76
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-31 00:59:34 +0000
+
+    determine mount point usability via statfs/statvfs
+    
+    Filesystems with no block size are unusable, so avoid
+    stat()-ing them and potentially having problems with
+    our subsequent stat() stalling when a network connection
+    slows (or goes) down.
+
+commit 9f7c1f7b8326a03c2105328f50df3ce2099de1d5
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-31 00:25:24 +0000
+
+    better error handling when faking memstream
+    
+    For systems without memstream support, using temporary files to
+    emulate memstream opens us up to more common (than ENOMEM)
+    errors such as: EIO, ENOSPC, ENFILE and EMFILE.
+    
+    Since we don't want our server to die completely on these
+    (sometimes temporary) error cases, we'll just stop publishing
+    iostat data to "watch" subscribers.
+
+commit c25d3846d96ad761e0e71304903dec79ca56424d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-30 23:02:47 +0000
+
+    mnt: allow concurrent readers on mount list
+    
+    On refresh, we can (slowly) build a new mount list and replace
+    the old one quickly and atomically.  This prevents ioutil
+    reader/writers from waiting on slow mount list refreshes;
+    as the mount list does not change frequently.
+    
+    This increases windows where iostat utilization may be
+    read/updated, especially when network mounts are temporarily
+    unreachable or slow.
+
+commit a3ca090b4b01d44e674f4db5cb13f5d111d0aa32
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-30 21:57:40 +0000
+
+    mnt: cleanup/document mountlist storage/nesting
+    
+    Moving ioutil out to a separate table allows us to discard our
+    private mog_mntent struct.  Data structure simplification also
+    allows code simplification.
+
+commit a960a351b2248a196c91cdbf6256f98e1bc2ef37
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-30 11:59:58 +0000
+
+    split iostat util% tracking from mountlist
+    
+    This prevents us from losing iostat utilization each time the
+    mount list is rescanned.
+    
+    Additionally, this allows us to read iostat utilization (and
+    write to sidechannel clients) concurrently while the mount list
+    is being refreshed.
+
+commit 2e1958b26b926c42f213ba47b71ec735d81448e7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-30 10:18:40 +0000
+
+    consistent allocation size for iostat utilization
+    
+    This is better than open-coding a length everywhere.
+
+commit 45843883077bc0a4ef745d03c3b4241278463f3b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-30 02:48:44 +0000
+
+    test_helper: expand relative paths in $PATH
+    
+    --daemonize will chdir("/"), so relative paths must be expanded
+    for USR2 upgrades to work.
+
+commit af8fe00640d70aab2e44110c88e4772e4daf4f68
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-30 02:48:45 +0000
+
+    test/mogilefs_integration: reduce chance of socket conflicts
+    
+    Disable SO_REUSADDR to avoid recently-used ports.  Additionally,
+    only close (via dereference) sockets when all listener sockets
+    are bound.
+
+commit 25740ec5e7e1a13e48552b4c6b0e60e8730641ea
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-31 00:59:00 +0000
+
+    move MOG_STR() macro to util.h
+    
+    We shall use it outside of defaults.h
+
+commit 6ed94e8b4a9219b10f8132078ba2882fddae40f9
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-24 01:21:52 +0000
+
+    mnt: avoid recursion in mount_entry_free
+    
+    Insane mount point aliasing may result in stack depth explosion.
+
+commit 24a1f80ca96d2c12f0cefaca4f7040dbc4f07919
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-25 20:55:33 +0000
+
+    limit --worker-processes to UINT_MAX
+    
+    UINT_MAX worker processes should be more than enough for anyone.
+
+commit dff57bf1b16a9435428c57ae26e6a3701f8d2ea9 (tag: v1.1.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 21:25:22 +0000
+
+    queue_epoll: fix version check for 2.x kernels
+    
+    Oops, we could accidentally mark a 2.x kernel as non-buggy.
+    2.6.32 and 2.6.34 may eventually get backports.
+
+commit e47a1fe799edc981272cb66a7f52f11d50826a9b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 20:13:47 +0000
+
+    http: avoid MSG_MORE on HEAD responses
+    
+    We need to signal we do not have more bytes to write to the
+    socket when generating HTTP HEAD responses.  This avoids a
+    200ms delay between HTTP responses.  This regression only
+    appeared in commit 14e0684507c06439ee9c7a731fd6ca90b7b9adcb
+    and was never in a release.
+
+commit 1074f0d2c55fee0de4f2ceba2829f6a3e12ce845
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 10:55:13 +0000
+
+    tests: additional test for trysend buffering in Linux
+    
+    This is hard code to exercise in the real world since
+    we only send tiny HTTP headers with trysend.
+
+commit be2062a5eb21718c932aaa4d49685e36763842ed
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 06:42:18 +0000
+
+    close: ignore ECONNRESET errors (for FreeBSD, maybe others)
+    
+    FreeBSD (and possibly other BSDs) returns ECONNRESET on close().
+    The descriptor still seems to get released and eventually become
+    usable again; so retrying close() is dangerous as we allocate
+    file descriptors from multiple threads.
+
+commit dc7c6efeac5fb0fb1f44e7f3cee625a6c33f7e26
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 02:51:52 +0000
+
+    http_date: time_t pointer is const
+    
+    This pointer is passed to gmtime_r(), which also takes a const
+    time_t *.  This makes it easier for users of mog_http_date() to
+    know the timep parameter does not get altered in any way.
+    
+    I noticed this discrepancy when rereading http_get.c for the
+    first time in a few months.
+
+commit 88b5f33f1f7e79d799da34b350f4dc59b875cf40
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 02:34:56 +0000
+
+    lazily call mkdir for file creation
+    
+    There's no need to waste time creating/checking directories
+    which already exist.  Since directories tend to hold multiple
+    files, we can optimistically run open()/openat() and only call
+    mkdir()/mkdirat() on ENOENT.
+
+commit c57ff63768cedd72abf74e93a3ba59070de77357
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 01:54:32 +0000
+
+    trywrite: build fix for platforms without MSG_MORE
+    
+    Oops...
+
+commit 0e9a8e156f0a060c7822069c4f69eea3710c793c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 01:37:17 +0000
+
+    simplify TCP_NOPUSH support code (remove TCP_CORK)
+    
+    Since we no longer use TCP_CORK under Linux (where we use
+    MSG_MORE instead), we can cleanup the nomenclature and avoid
+    confusing people by mentioning TCP_CORK.
+
+commit 14e0684507c06439ee9c7a731fd6ca90b7b9adcb
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 01:11:04 +0000
+
+    linux: favor send() w/MSG_MORE over TCP_CORK
+    
+    This saves several setsockopt() syscalls and reduces system
+    CPU usage.
+
+commit 37026af96dec638aa850d604003bf7218d90037d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 01:17:48 +0000
+
+    copyright comment updates for 2013
+    
+    gnulib did it for us in m4/gnulib-cache.m4, we'll match.
+
+commit 96b173c5516ad56ad2ea41d99406d58998be88b2
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 00:37:29 +0000
+
+    http_get: disable FADV_SEQUENTIAL for small responses
+    
+    So there's no need to waste a syscall on small reads which
+    would not benefit from readahead at all.  Using 256K as a
+    threshold for "small" reads, which is twice the normal
+    max readahead window on modern Linux 3.x.
+
+commit 17e2cca675df298c6d99ee2b7f0e099c02eb271c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-17 00:26:28 +0000
+
+    epoll: update EPOLL_CTL_MOD workaround for stable kernels
+    
+    Linux v3.2.37+ does not need this fix.
+    Linux v3.0.59+, v3.4.26+, v3.5.7.3+, v3.7.3+ are all under
+    review and not need this.
+
+commit 6c4e0c408de81ceb49fe9dac2ad38a1655aea625
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2013-01-02 11:19:09 +0000
+
+    epoll: avoid EPOLL_CTL_MOD bug in Linux <= 3.7.1
+    
+    On SMP machines, EPOLL_CTL_MOD had a race condition under
+    Linux <= 3.7.1.  This allowed events to be missed if it
+    arrived near the time the EPOLL_CTL_MOD request was issued.
+    
+    ref: linux.git commit 128dd1759d96ad36c379240f8b9463e8acfd37a1
+
+commit 86477eafdadda573b850cf610a60c5e6eab1c189
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-13 09:29:25 +0000
+
+    Rakefile: fix Regexp encoding issues under 1.9
+
+commit 7555c67ae18c3ca9363d706e51c97a7a47560d93 (tag: v1.0.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-13 00:43:14 +0000
+
+    .gitignore: skip perf.data* from the Linux perf(1) tool
+    
+    Sometimes developers will attempt to profile cmogstored.
+
+commit 678124d958dbb0ac6b9815274727eae886e16948
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-12 20:16:00 +0000
+
+    manpage: document MOG_IOSTAT_CMD environment variable
+    
+    This is in Perl mogstored since 2.65
+
+commit bc5c35ca4493ae0721200e8f823ee01fd384ef36
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-12 09:53:15 +0000
+
+    test/cmogstored-cfg: better race avoidance
+    
+    We need to wait longer for threads to become ready when
+    running under valgrind.
+
+commit 72482d899fa5fa7170ccbff9107a9bfdfc421239
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-09 00:16:34 +0000
+
+    dev: log EIO error on close() of usage file
+    
+    If a filesystem error occurs when close()-ing the usage file,
+    ensure we log the error for debugging (and hope syslog writes to
+    a different device!).
+
+commit ad124025968349ac5054e5450487749a158c30e4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-09 00:09:42 +0000
+
+    use mog_close() for assert checking in a few more places
+    
+    We only want to use bare close(2) when we can tolerate
+    and handle EIO errors, never anywhere else.
+
+commit b6781c62cc5022723ec65d9aaee50e08e843b3b8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-09 00:00:37 +0000
+
+    remove queue_state field from struct mog_fd
+    
+    We do not need to track queue state any longer since accept
+    threads always inject directly into the epoll/kqueue watcher
+    nowadays.
+
+commit c980baa7c2905fd7fb3075435bddf46512794cea
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-08 01:28:22 +0000
+
+    thrpool: signal threads concurrently at shutdown
+    
+    This speeds up shutdown for kqueue users, as kevent() is not a
+    cancellation point.
+    
+    While we're at it, remove the unnecessary check for mog_queue.
+    before pthread_kill().  This check was a remnant of the old,
+    NOTE_TRIGGER-based implementation.
+
+commit ebc431ca53d6f723ff7a91e7a66fefbf363fcd24
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-08 12:50:36 +0000
+
+    fix HTTP idle expiry race under high FD pressure
+    
+    On a properly setup cluster, running out of FDs should be
+    a rare, if not impossible occurence.
+    
+    The previous lockless code, left the following window which
+    could allow shutdown() to be called on a newly-accept()-ed
+    descriptor:
+    
+        thread[0]             | thread[1] | thread[2]
+        ----------------------+-----------+----------------------
+        tcp_timedout(fd)      |           |
+                              | close(fd) |
+                              |           | accept().return => fd
+        shutdown(fd) - WRONG  |           |
+        ----------------------+-----------+----------------------
+    
+    By introducing a spinlock (for all FD types) which is only
+    acquired on rare code paths (assuming persistent connections),
+    we can avoid expensive locking for common code paths only only
+    spinlock on a client connection/disconnect (and when we actually
+    run out of FDs).
+    
+    The cost of a spinlock should be insignificant as it is never
+    contended in normal code paths.  Under high FD pressure, the
+    expiring thread will never fight for a spinlock.
+    
+    Clients with persistent connections do not encounter these
+    code paths and thus suffer no performance hit, even if the
+    server does run out of FDs.
+    
+    While we're at it, avoid attempting to expire multiple times
+    within the same second so work actually gets done.
+
+commit 2ffe17557c524b4c9091685ecb416a50f4e49507
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-08 12:50:35 +0000
+
+    test/mgmt: wait longer for thread spawn before counting
+    
+    All of the server threads may not be done spawning by
+    the time we get a response, call Thread.pass a few times
+    since that's a wrapper for sched_yield() in Ruby 1.9.
+
+commit 570ce5b7b8e7712c688f721a0df5d120999efc93
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-08 12:50:34 +0000
+
+    retry if iostat spawn hit out-of-FD
+    
+    Creating the iostat pipe may fail when we're under FD
+    pressure.  Ensure iostat can recover in the future
+    once FD pressure is reduced.
+    
+    iostat retries are governed by the usage file generation
+    interval: 10 seconds
+
+commit 396b934a99533baee1f842820e044adc01bd481a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-08 12:50:33 +0000
+
+    accept_loop: avoid spamming syslog on EMFILE/ENFILE
+    
+    Some (most?) syslog implementations have their own throttle,
+    but it's less expensive to throttle internally.
+
+commit fccc4848f787ec124f88a8ec4ab0198e65897b85
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-08 00:08:10 +0000
+
+    mnt: TODO item for fine-grained locking
+    
+    Fine-grained locking of mount entries makes sense in the
+    presence of unpredictable network filesystems.
+
+commit f609618b6854ea55270161008e248d9016214da3
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-07 03:04:27 +0000
+
+    INSTALL: add default CFLAGS to libkqueue note
+    
+    Otherwise, users may suffer significant performance
+    hits when generating MD5 checksums.
+
+commit c051dfbeed3b30f78ad3e9e252240479ba1f1b6e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-06 21:17:23 +0000
+
+    dev: increase precision of space calculation
+    
+    The "long double" data type is present in C89 and may offer
+    more precision than plain double on modern compilers.  This
+    change is unlikely to be noticeable right now, but may help
+    some very large machines in the (far) future.
+
+commit 9091f665948ca91081552c558bfa9257e9a88cf6
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-06 10:53:11 +0000
+
+    fix usage report on FSes w/ small fragment size
+    
+    Under FreeBSD 9.0, fstatvfs() on a ZFS filesystem will return
+    the smallest fragment size ZFS supports (512).  Using integer
+    arithmetic, dividing 512 by 1024 will result in zero.  Thus, the
+    easiest way to preserve the fractional component is to resort
+    to floating point arithmetic: f_frsize / 1024.0
+    
+    The division must happen first to minimize the possibility
+    of overflow.
+
+commit 157d904a8d52d50c7f2fccd6e0826e189986bc76
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-06 10:23:51 +0000
+
+    mnt: better handling of non-traditional filesystems
+    
+    We no longer require the devname of the mount entry to have
+    a leading slash.  This allows devnames w/o leading slash
+    (e.g. ZFS on FreeBSD 9.0, tmpfs on Linux) to be used as
+    storage devices.
+    
+    However, we always favor a devname with a slash in it
+    for the "device:" field of the usage file.
+
+commit ce6995c2bd443e3d0847c661e418907816b21a3c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-06 05:35:12 +0000
+
+    compat_memstream: retry on tmpfile() EINTR
+    
+    If tmpfile() fails another way, ensure the error message
+    is sensible and abort() (since open_memstream() would've
+    aborted, too).
+
+commit b32da1db69ce2be0e8f503cc1b562b0496d198f8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-05 20:58:59 +0000
+
+    reduce deps for manpage when building from dist tarball
+    
+    This allows users building from the dist tarball to make
+    minor changes to the source without needing "help2man".
+    
+    This change has no effect for developers building from
+    the git repo.
+
+commit b7be1a6897e8a699211690e9bb9114a2d0a69d54 (tag: v0.9.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-05 01:07:30 +0000
+
+    test_worker_processes_mgmt_shutdown: wait for children to die
+    
+    This avoids a race condition where a child dies after the parent
+    is reaped by us.
+
+commit ef7bd6492102c02abe175d2adb81b8566e697bac
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-05 00:35:40 +0000
+
+    cleanup and simplify interrupt/shutdown handling
+    
+    We now assume any non-zero timeout (not just infinite timeout)
+    is cancellable as well as interruptible.  This means
+    mog_idleq_wait will no longer retry blindly on EINTR.
+    
+    Handling of explicit device refreshes and aio_threads
+    is now easier-to-understand and follow.
+
+commit 0de5d9ef69b344138beacb9db5664c36215a4a59
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-05 00:20:38 +0000
+
+    test/http_idle_expire: skip test if using libkqueue
+    
+    Different versions of libkqueue may use more or less file
+    descriptors, so skip this Linux-only test for now.
+
+commit 712f330713a20b554d01a769819548d9dc675980
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-04 12:08:17 +0000
+
+    nostd: include generated config.h for setproctitle
+    
+    Since we rely on gnulib-modified stdio.h/string.h headers,
+    we'll need the generated config.h to make sense of them.
+
+commit eeb22d5e0fbbdbb51a7e1e77916ec0d27e944ac7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-04 00:50:29 +0000
+
+    mgmt: allow "graceful shutdown", too
+    
+    cmogstored always does graceful shutdown, but this
+    improves compatibility with Perlbal mogstored.
+
+commit 58facb8c5ea550c6c9abff0d4628a6a471761739
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-03 23:24:16 +0000
+
+    http_put: avoid infinite loop on ENOSPC
+    
+    In case space usage blows up, we should treat zero-byte
+    writes as ENOSPC to ensure delete I/O remains possible.
+
+commit 05550b1ac2fb18090586d104c50b90819a5da015
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-12-03 23:19:55 +0000
+
+    fail on ENOSPC when calling dprintf()
+    
+    dprintf() may return a non-negative value and still set ENOSPC
+    on partially-written data.
+
+commit 441ffb68a7d89556da0efe8fdf64538acc5eeb87
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-22 01:35:46 +0000
+
+    http_put: additional debug logging for failed PUTs
+    
+    Failed PUTs are almost always a bigger problem than failed
+    GETs, so include more info for users to track down problems.
+    Under Linux, we can check for tcpi_last_data_recv with
+    TCP_INFO to detect network timeout issues.
+
+commit 07f7cfcddc1d1baacf76e0a84007901292a710eb (tag: v0.8.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-14 21:27:11 +0000
+
+    doc: updates for accuracy and correctness
+    
+    Fixes manpage references to include sections.
+
+commit b615dd35ac805176cd1284145b0c0a75f2ce5554
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-14 21:05:14 +0000
+
+    test/mgmt: fix stupid race condition in aio_threads test
+    
+    This test failed badly on multi-core machines.
+
+commit 41327689fb727843de258ec99145b78631f821a6
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-14 20:55:01 +0000
+
+    mgmt: support "shutdown" command (from Perlbal)
+    
+    This allows admins to reuse management scripts originally
+    written for Perl mogstored with cmogstored.
+
+commit e848b1794240281e93fc2715b0b44238025e3552
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-13 01:37:59 +0000
+
+    cmogstored: add a no-op --skipconfig switch
+    
+    Unlike Perl mogstored, we currently do not load a default
+    configuration.  However, this switch makes it easier to
+    use cmogstored as a drop-in replacement for mogstored when
+    testing MogileFS::Server
+
+commit 921dc96e9a6cd4a40939354674a4f8408f0eeed7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-12 23:29:52 +0000
+
+    test/mgmt: allow test to pass on non-Linux
+    
+    Some systems do not have /proc/$PID/task, but we know Linux does.
+
+commit b43bcca20aa5c18d5dee8f9bb125a88e6dba3e04
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-12 21:54:43 +0000
+
+    TODO: remove completed items from list
+    
+    We are mostly done, for now.
+
+commit 5b0a474d479f1c77290ad4976548f60f24f69553
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-12 21:34:06 +0000
+
+    import progname from gnulib for error messages
+    
+    This avoids segfaulting on error messages with
+    non-glibc systems (e.g. FreeBSD 9.0).
+
+commit ecbc2ef0b41a9adfd35a1d7979de75f6e5ff1142
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-12 21:28:23 +0000
+
+    test/http_idle_expire: support testing with libkqueue (under Linux)
+    
+    Idle expiry still requires Linux TCP_INFO, but we can test
+    with libkqueue.
+
+commit a0e59dc583a296903a250715331374df0fb7e20a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-10 03:04:48 +0000
+
+    http_put: keep connection alive on bad Content-MD5
+    
+    We've drained the socket entirely for the failed request, so
+    technically the TCP connection is safe to reuse.  We want to
+    keep this connection alive because the monitor process on the
+    MogileFS::Server will intentionally send invalid Content-MD5
+    headers to detect if a a backend is capable of verifying MD5s or
+    not.
+    
+    This should avoid unnecessary TIME-WAIT connections being
+    created by multiple trackers/monitors.
+
+commit 5c73abe7d6acc66ff7177e31dd0c75f67c53d9f0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-09 04:46:43 +0000
+
+    mgmt: support "server aio_threads = <digit>"
+    
+    This allows tunable thread counts at runtime like regular
+    mogstored (using Perlbal).
+
+commit 1d7604267fc661f45a95e3d4ebda5bababe7bb8a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-09 03:19:19 +0000
+
+    test/http_idle_expire: disable valgrind for this test
+    
+    valgrind may create FDs behind our back, throwing off our
+    thresholds for EMFILE/ENFILE.
+
+commit c7a180ced2a35dc66b32112ea9fd26a64dccef41
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-09 02:52:17 +0000
+
+    iostat_process: more aggressive idle_timeout expiry
+    
+    Since we only trigger this behavior on EMFILE/ENFILE,
+    we become extremely aggressive with expiring idle clients.
+
+commit 434a5e1951f15b014a1e592b0bd30352cb6b7284
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-09 02:25:37 +0000
+
+    iostat_process: expire idle clients on pipe() failure
+    
+    But do not retry, MogileFS can function without iostat output
+    for a little bit.  We could reuse the pipe for different iostat
+    processes, but we'd have to ensure the pipe is properly drained
+    in case iostat crashes or corrupts output for whatever reason.
+
+commit 68d6b947e995160b32d1b69d72a4c957018f258e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-08 16:46:48 -0800
+
+    dev: improve error handling on usage file generation
+    
+    Opening a usage file for writing can hit the FD limit, so
+    ensure we retry on EMFILE/ENFILE/ENOMEM errors.
+    This also improves diagnostics for failures of individual
+    function calls.
+
+commit 05621edc90699ddf09d5a19944a34c2b802815e5
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-08 16:24:48 -0800
+
+    http: implement idle client expiry under FD pressure
+    
+    In case there are some wacky setups which open way too many
+    connections, we will nuke old HTTP connections (older than
+    5 seconds) under high FD pressure.  We do not drop connections
+    under normal loads.
+    
+    This costs nothing unless we hit ENFILE/EMFILE/ENOMEM when
+    accepting or opening files.
+    
+    This only affects Linux, but we expect most deployments to be
+    Linux anyways.
+
+commit b41664ecbb2532772c63f074165b0e413d626fe0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-11-08 19:55:35 +0000
+
+    queue: refactor for future, potential kqueue speedup
+    
+    kevent() has the ability to insert items into the kqueue
+    and retrieve with the same syscall.  This allows us to
+    reduce syscalls on systems with kqueue support.
+    
+    Regardless of whether this potential optimization can
+    improve performance, this makes the code smaller and
+    possibly easier to follow.
+
+commit b84b2d84dd18417efa31c3daf748ab7c60def5e1
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-31 18:56:56 +0000
+
+    test/*.rb: fix ambiguous argument warnings from Ruby
+    
+    git ls-files '*.rb' | xargs -n1 ruby -w -c
+
+commit 1d0c92857f3ffcd1607393a79342ac807a067b0c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-31 18:40:18 +0000
+
+    http_put: return 507 for excess sizes in headers
+    
+    Content-Length, Content-Range, chunk size can all overflow
+    the limit of off_t, so return a more informative 507 instead
+    of a 400.
+
+commit ced306c61f6801072bccbd00fb5992878843269e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-30 19:45:28 -0700
+
+    http_put: EFBIG returns 507, centralize error handling
+    
+    Somebody setting an insane Content-Range should get 507
+    errors, too.
+
+commit ab5561b3f1e22d063d22eff210f3ace56f9eef08
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-30 13:22:20 -0700
+
+    die() using error() from glibc/gnulib
+    
+    Compared to our previous function, this:
+    
+    * prefixes the message with the program name
+    * can show the strerror() message more consistently
+    * automatically adds a trailing newline for us
+
+commit cc25faaba513e8ee304a507ec7cc2ff35ae9ae84
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-30 12:42:13 -0700
+
+    TODO: remove accept filter/TCP_DEFER_ACCEPT item
+    
+    Those probably won't ever be needed point due our design.
+
+commit 11fdd1e232fbd7657b043b3891f9638a44957ef2
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-29 17:59:34 -0700
+
+    add missing copyright + license info to a few files
+    
+    The project copyright information should cover it, but just
+    in case...
+
+commit aebe803395fb2e07425607c4063e3a765fbf6759
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-29 17:53:00 -0700
+
+    doc/queues: update for accuracy and changes in recent months
+    
+    Documentation lagged behind code :<
+
+commit 1c0dfbd91ed1fbd31eb7ecf708e9614f8f1279b0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-26 08:34:59 +0000
+
+    mnt: avoid wasting syscalls stat()-ing dummy FSes
+    
+    Dummy filesystems aren't for storing data, so there's no
+    point in stat()-ing them (especially if it can be a slow
+    operation).
+
+commit e2a1d55001e8bece2700f9199fdf714b0af6460a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-26 08:20:10 +0000
+
+    http_get: fix Content-Range response header typo
+    
+    Most HTTP parsers are lax in the way they handle the '\r' for
+    headers, but strict HTTP parsers may have trouble handling a
+    missing '\r'.
+
+commit 036f96c7133bebde4a89f7219be044c0a6e82edf (tag: v0.7.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-16 23:49:34 +0000
+
+    http_put: better reporting of ENOSPC errors
+    
+    The 507 error code is reserved for out-of-space conditions,
+    so allow clients to see this error.  Also, ensure we log
+    the condition to syslog for a sysadmin to see.
+
+commit 9d8a229dcec1c3245e25b6b3fdebc6218bddbc9d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-16 23:21:03 +0000
+
+    doc: remove TODO item for mmap() writes during PUT
+    
+    Error handling for mmap() is too complex in a multi-threaded
+    situation to be worth dealing with.  The performance of pwrite()
+    is plenty sufficient.
+
+commit 9b772f9cddcc4eddcb0b566223b2f67e9f592ac0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-16 23:10:02 +0000
+
+    http*: do not rely on MOG_RBUF_BASE_SIZE for calculations
+    
+    The rbuf may grow sometimes to accomodate larger requests,
+    so use rbuf->rcapa instead.
+
+commit 23776ccdc58341f2c055bc6b2247b3ed9ea73d36
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-16 22:58:13 +0000
+
+    http_chunked_put: chunk-extension tests
+    
+    We never buffer chunk sizes nor extensions, so we can read
+    (and blackhole) arbitrarily large chunk extensions without
+    OOM-ing.
+
+commit 3d68778c8b4aa94526ccea073d344809bf941a01
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-16 21:19:44 +0000
+
+    http_put: boundary fix for Content-MD5 trailer handling
+    
+    Attempting to upload a 198689228 byte file with a Content-MD5
+    trailer using 16K chunks caused a boundary error in trailer
+    reading+parsing.
+
+commit 11d82d39264370c11864a453f72bcf63029e8f59 (tag: v0.6.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-04 08:44:53 +0000
+
+    gnulib update
+    
+    (gnulib master @ commit 297d0845e096a0fb936554eac57664b86585717c)
+
+commit bbf54160ed8a3b5f39775811fe86b4b51fee9165
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-04 01:20:45 +0000
+
+    additional test cases for fsck queue checksums
+    
+    These tests were written while hunting down the bug
+    fixed by commit 3277b8a3e79b4bc152bc85849d40cda670857f28
+
+commit 3277b8a3e79b4bc152bc85849d40cda670857f28
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-03 23:31:37 +0000
+
+    fsck_queue: avoid concurrency bug on assertion
+    
+    Once an mog_fd is pushed into the active queue, another thread
+    can take it and the assertion for the prio field may no longer
+    be true.
+
+commit 96ef1f60f18a72408a0a406bba02edf4d16a912d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-10-03 22:08:28 +0000
+
+    test_helper: more descriptive error on get_client failure
+    
+    Sometimes we need to figure out why connections fail...
+
+commit 3090c9c6a5d9a7ffdea6c3a97b566ae49f1d39de (tag: v0.5.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-09-06 19:38:05 -0700
+
+    fix I/O util for multiple devXX dirs on the same FS
+    
+    The "watch" sidechannel command no longer gets confused in case
+    two "devXX" directories share the same filesystem (and thus
+    st_dev).  This case should be rare in production setups, but
+    happens frequently in testing.
+    
+    Perl mogstored does not have this bug.
+
+commit 3f0aa7740cae426a6a1b34a943917ae87d7bc2a5
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-09-05 17:32:29 -0700
+
+    fdmap: un-inline mog_fd_init()
+    
+    We never call this function in a hot path so there's no
+    point in the extra code bloat.
+
+commit b4b96693d5ba454c1a3815f8b13e268322371a0f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-08-25 18:07:28 -0700
+
+    ioprio.h: remove needless function inline
+    
+    Let the compiler decide, especially when it generates no
+    warnings.
+
+commit 0de369be708e4d508c6d7e2f6085ea507f4893dc
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-08-19 01:16:47 +0000
+
+    gnulib-cache: update for gl_WITNESS_C_MACRO fix
+    
+    updated versions of gnulib have the following typo fix:
+    
+      commit cc9d1f2941d6a7fb3e18d7124ef5173345fc849e
+      Author: Bruno Haible <bruno@clisp.org>
+      Date:   Mon Aug 13 12:49:34 2012 +0200
+    
+          gnulib-tool: Fix persistence of --witness-c-macro option.
+    
+          * gnulib-tool (func_import): Fix typo in emit of gl_WITNESS_C_MACRO.
+          Reported by Dmitriy Selyutin <ghostman.sd@gmail.com>.
+
+commit 4c5405740f58ef9bc71b12ca9f4532b7f67222f8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-08-18 08:47:08 +0000
+
+    Rakefile: update for HTTPS freecode API
+    
+    freecode.com now requires HTTPS for its API.
+
+commit f1f59b6c81ce2a738b866f5ac4140400e0b3a104
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-08-04 01:47:16 +0000
+
+    scale acceptor threads to number of CPUs available
+    
+    acceptor threads no longer touch the filesystem (and rarely ever
+    did so in practice before this), so there's no need to scale
+    them up based on device count.
+
+commit 5eb123b09c66d18504070f41b6bb25b043abccbf
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-08-03 23:23:45 +0000
+
+    bind_listen: remove set_accept_filter TODOs
+    
+    Since acceptors now run more eagerly and push directly into
+    the event queue, we can avoid potential issues with
+    TCP_DEFER_ACCEPT and FreeBSD accept filters.  This reduces
+    pressure on the OS and shifts the logic to us.
+
+commit 832316624f7a8f44b3e1d78a8a7a62a399241840
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-08-03 22:12:22 +0000
+
+    acceptor threads push directly into event queue
+    
+    This offloads work from the kernel into userspace and helps us
+    get around the lack of a useful/non-buggy TCP_DEFER_ACCEPT
+    semantics.
+    
+    After this, we may now reduce the number of acceptor threads
+    as the acceptor threads will no longer be bound by disk
+    performance.
+
+commit 84d7e098b71046a3f6aa3b263215123acfdcecac
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-19 23:55:32 +0000
+
+    use TCP_NOPUSH if available for FreeBSD-based systems
+    
+    For many years now, TCP_NOPUSH behaves exactly like TCP_CORK
+    on Linux so we can just enable it to save system calls on
+    the /client/ side.
+    
+    Using the integrated writev-like facility of the BSD sendfile()
+    implementation may not be worth it as it complicates error handling.
+    
+    Tested on Debian GNU/kFreeBSD 6.0
+
+commit 8ddcaf62158ec3c4adbf1874576a73f45d41ddfe
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-12 04:12:01 +0000
+
+    build: disable gnulib tests from build
+    
+    Saves about 10s of build time with "make check" and makes
+    the distribution tarball a little smaller.
+
+commit d8586dad17dc2e572a2356e856d0188dd2bb4e80 (no-activeq)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-12 03:39:39 +0000
+
+    avoid getcwd module from gnulib
+    
+    We don't need to avoid any of the crazy things gnulib getcwd()
+    works around.  The test for it is slow on Debian GNU/kFreeBSD
+    and doesn't seem to work without fstatat() support...
+
+commit 8faba95389e62a8f949d2ae479754ee7a7150b2e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-12 01:06:23 +0000
+
+    http_put: add retry for EEXIST, small refactor
+    
+    Retry at least once on EEXIST for rare conflicts when creating
+    new temporary files.
+    
+    Factoring out open_put() into its own function makes this easier
+    to keep track of heap memory allocations.
+
+commit b19f9e707ab1ebea748ccc9dcf2d8d6cadf4e616
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-11 22:08:08 +0000
+
+    remove user-space, SIMPLEQ-based active queue
+    
+    Epoll/kqueue descriptors are safely usable for this task given
+    the the ability to use one-shot notifications (which is
+    independent of level-triggering, even).
+
+commit 49df2ac41136e8ab9b0fe01fbb46c0aefb924eb1
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-09 23:07:03 +0000
+
+    test: avoid assert_nothing_raised in Ruby tests
+    
+    This method can hide real bugs and make test failures
+    harder to debug.
+
+commit af4e2433de45cabf0b0d2a8ed3e1c1a79a977b2b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-09 15:47:34 -0700
+
+    http: TCP_CORK support for Linux kernel users
+    
+    This is mainly to prevent triggering potential bugs in some HTTP
+    clients that rely on the Perl mogstored (which uses TCP_CORK).
+    
+    This should also make HTTP GET responses slightly more efficient
+    in terms of network traffic.  Low-latency clients may see some
+    improvement because clients may process the response headers and
+    body with fewer wakeups and waiting.
+    
+    The downside of this is slightly slower DELETE/PUT/HEAD
+    responses due to the additional syscalls on the server.
+
+commit bdb327b11137d8b184ff0322eb90ce6e837db53d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-09 21:18:33 +0000
+
+    gnulib updates
+    
+    gnulib now includes tests by default in the "tests/" directory.
+    We'll also avoid importing certain modules that our platforms
+    will never need to save some space in the tarball.
+    
+    Based on gnulib commit 48fe477c9008efadab8cf8c0c3240d824c12a8b9
+
+commit 663cb7902ac252705df6fc0191fbf6f57d4cbb98
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-07-09 22:26:27 +0000
+
+    build-aux/release: remove read-only directories
+    
+    "make dist" will leave us with a read-only directory
+    which "git clean -f -d" cannot remove.
+
+commit 713e1c23dfddb41406f5d8585aa13751c69400be
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-06-26 12:28:14 -0700
+
+    allow absolute URIs in HTTP requests
+    
+    In case some MogileFS clients send absoluteURIs (even when
+    unproxied).  RFC2616 (section 5.1.2) states HTTP/1.1 servers
+    /must/ accept absolute URIs, so we'll comply with that
+    requirement.
+
+commit fad9f0d81b84e18f5f2079b0fe8846f6ab0a961a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-06-21 15:54:56 -0700
+
+    bind_listen: update comment on TCP_DEFER_ACCEPT for Linux
+    
+    Disturbing, but oh well, syscalls are cheap in Linux.
+
+commit 5456f4a0811f967390b533fd2a5db5edbbc52ad7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-05-19 00:44:20 +0000
+
+    Rakefile: set stable tag for Freecode.com
+    
+    Maybe that will get some suck^H^H^H^Husers to use this!
+    Honestly, it's pretty solid in my testing.
+
+commit 5efc39b111123a2b149f7c958f4b61fe50df1dd2 (tag: v0.4.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-05-19 00:35:48 +0000
+
+    m4/.gitignore: add off_t.m4
+    
+    This was apparently added in the latest gnulib update.
+
+commit d0090a4ba3a519d6c82bbd803991901139f95594
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-05-03 14:03:04 -0700
+
+    test/cmogstored-cfg: remove unused variable in test
+    
+    Found with "ruby -w -c"
+
+commit 62b6be8b16a77530f1a0d560198ff4508e5ef3c7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-05-02 13:56:29 -0700
+
+    kqueue: rely on EINTR instead of EVFILT_USER to shutdown
+    
+    Using pthread_cancel() and pthread_kill() allows us to do
+    shutdowns of individual threads in the future.  EVFILT_USER will
+    just spam the kernel and the thread-specific "dying" hack won't
+    work if we only want to shut down a single thread.
+    
+    kevent() is not a cancellation point in FreeBSD and will
+    not be in libkqueue, either.  However libkqueue will set
+    errno==EINTR if it is interrupted, allowing cancellation
+    requests to go through.
+
+commit 48e0cdb616ba09757c30f02d900657f381eaae46
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-05-02 09:25:42 +0000
+
+    fix subdir builds failing on help2man
+    
+    We can only rebuild the manpage if cmogstored is present.  When
+    building in subdirectories, our manpage-hack.mk snippet won't
+    work.
+
+commit e0857dffa251e0976bc658346ec73cc02e4dc435
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-22 21:03:26 +0000
+
+    INSTALL: libkqueue 1.0.6 is slightly buggy, after all
+    
+    However, the libkqueue stable branch is looking good.
+
+commit 39bb21ea9f0f95a1d4117fa3e174f794fb78f445
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-05-01 19:17:48 -0700
+
+    iostat_process: fix warning for free() usage
+    
+    Ugh, free() should take "const void *", not "void *",
+    now we have a hacky mog_free() function which wraps
+    free().
+
+commit 7db031ed20cee6ca49628e9b5f10d0811bff0647
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-24 16:01:06 -0700
+
+    iostat_process: avoid heap alloc in child before exec
+    
+    Since xvasprintf() allocates heap memory, malloc()
+    implementations may not release/reinitialize locks in child
+    processes properly.  This shouldn't be a problem on glibc, but
+    other systems may encounter deadlocks or SEGV as a result.
+    
+    Eventually we'll replace fork()+exec with posix_spawn()
+    (patches accepted).
+
+commit 13027727d2ddce6ed9e630e34671fc0866a1ddd0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-22 01:40:33 +0000
+
+    fix spelling of "cancellable"
+    
+    "cancellation" has a double-L, so "cancellable" should
+    be spelled with two Ls, too..
+
+commit 78bc8a2200c0c508a33975187a81735538e1823d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-22 00:00:34 +0000
+
+    queue_kqueue: prevent event hogging during shutdown
+    
+    We need to keep the number of in-flight requests in check during
+    shutdown (to prevent OOM errors).  By preventing a dying thread
+    from reading off the kqueue during non-blocking requests, we can
+    avoid having one thread hog up all the NOTE_TRIGGERs intended for
+    other threads.
+
+commit ba63c8bc399f3d01a29171abdde56d4577bb4394
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 21:45:58 +0000
+
+    cleanup error handling for rare errors
+    
+    EBADF is majorly bad news for threaded apps like this one and
+    indicative of a fatal bug, so be sure we enforce it so it never
+    happens.  We also never close file kqueue or epoll file
+    descriptors, so EBADF should really never happen.
+    
+    ENOMEM from epoll_ctl() should be recoverable by falling back
+    to the active queue.
+
+commit 4c1f0946b7909543092fed20b986fe842d18e410
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 21:23:19 +0000
+
+    TODO: remove test for epoll/kqueue cancellation
+    
+    All glibc versions (>=2.4) we care about has epoll_wait() as a
+    cancellation point, and we explicitly manage cancellation
+    for kqueue (especially libkqueue) users.
+
+commit 58f8fec7f881e1a48c20e3689eca8693a3f8e83a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 21:15:23 +0000
+
+    test/graceful_quit: hacky workaround for race
+    
+    Noticed during valgrind testing, ugh, this is ugly :<
+
+commit fdeadeaa48846722dcb897e4dee33fc9d6486367
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 21:07:23 +0000
+
+    test: valgrind suppressions for libkqueue
+    
+    libkqueue has its own internal memory management and mini-GC
+    to keep memory usage bounded.  It's not possible to access
+    directly, so have valgrind ignore it and trust libkqueue to
+    not leak memory internally.
+
+commit 072bb103807a642d4279a0bf320c988955d89aac
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 20:03:44 +0000
+
+    kqueue: schedule wakeup of sleepers during shutdown
+    
+    By explicitly giving kevent() sleepers a chance to wakeup
+    and run, we can reduce the number of times we need to trigger
+    wakeups via NOTE_TRIGGER.
+
+commit 942157089f2c0172109dd90b7992bf5b30ad3f97
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 02:50:09 -0700
+
+    kqueue: fix build when using native kqueue/kevent()
+    
+    I originally intended to only use mog_idleq_poke() for
+    libkqueue, but it's not worth the difficulty of testing
+    for native kqueue implementations.
+
+commit ad44c3a24011d07db828a77a9e0c04809637db0d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 09:30:56 +0000
+
+    queue: rework kevent cancellation handling
+    
+    The kevent() function as implemented by libkqueue does not
+    support thread cancellation the same way a real kevent() (on
+    FreeBSD) appears to.  So pretend no implementation of kevent()
+    is cancelable and handle cancellation ourselves using
+    pthread_testcancel().  This allows us to support any platform
+    where kevent() may work, since it's unclear if other *BSDs
+    implement kevent() as a cancellation point.
+
+commit 8d375156c8e6b8c0e728aaec4319e679674558b0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 04:49:46 +0000
+
+    queue_kqueue: factor out add_event() function
+    
+    We'll be reusing this in the future.
+
+commit a2a1e29d2d9f10b8ded99562240cf625f4323b0a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 02:03:46 +0000
+
+    queue_loop: non-blocking wait is not cancellable
+    
+    Allowing cancellation for a zero-time wait on epoll/kqueue
+    can potentially leave a descriptor hanging around forever
+    from a dead thread.
+
+commit 0fbc6f587e5ab3c8b587fd6a2370e31cefc5918f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-21 00:00:45 +0000
+
+    kqueue: use cross-thread wakeup properly
+    
+    By setting the proper filter flag depending on the file type, we can
+    eliminate the awkward NOTE_TRIGGER usage and unnecessary system
+    calls/locking of the active queue when migrating sockets between
+    threads.
+
+commit c9e17c62dba9aab163e557d5547384a08a4efa7b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-20 05:50:02 +0000
+
+    INSTALL: update libkqueue notes for libkqueue 1.0.6
+    
+    The author was quick to backport this fix!
+
+commit a70803dcc76836d42e1082e556a8bb98d728e07b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-20 05:49:24 +0000
+
+    queue_kqueue: remove unnecessary errno assignment
+    
+    This was accidentally left in while diagnosing an issue
+    with libkqueue.
+
+commit 7acb104061cb9456894fab61b927a82cb39b2d06
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-20 03:44:28 +0000
+
+    tests: use warnings instead of "prove -w" flag
+    
+    "prove -w" isn't supported on some older systems which
+    we intend to support (e.g. CentOS 5.x).
+
+commit cd49627f2827ef6a6d58adc26069d3a8bc5beca5
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-20 03:34:04 +0000
+
+    only set explicit stack size on GNU/libc and FreeBSD
+    
+    We don't know enough about the libc other platforms to make an
+    intelligent choice about stack size, so just use the default to
+    avoid potential problems.
+
+commit 4a456625b4b68cbee9b4c7009b27ce82f7bf842a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-19 19:56:35 -0700
+
+    INSTALL: document libkqueue support status
+    
+    Maybe we'll see folks running on GNU/Hurd with this :)
+
+commit c529e30a531f80d3382a64dcebc710583c62861b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-19 16:20:42 -0700
+
+    thrpool: use default stack size for libkqueue users
+    
+    libkqueue appears to use a lot of stack, so just use
+    the default stack size to avoid unexplained segfaults.
+
+commit fc3062add1af8fadd4e9f7ef1de519db3654fa5b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-19 14:24:29 -0700
+
+    attempt to support building with libkqueue
+    
+    Not working, yet, but maybe it will one day
+
+commit 697cee554860d185dd1208de7788ed342beb52dd
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-19 13:24:12 -0700
+
+    queue_kqueue: fix naming to match function name for kevent
+    
+    We're using the kevent() function here, not kqueue()
+
+commit 2a18565034f26aae4bbddc514ca47dfbc0e07b6b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-19 13:08:06 -0700
+
+    README: updates, remove scary warnings
+    
+    This is valgrinded and well-test, so it's probably ready for for
+    production usage.
+
+commit 52a0c977a0aa9eb7b510c24b8ec1d160a046192c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-19 02:44:14 +0000
+
+    switch completely to __thread for thread-local storage
+    
+    Since we already depend on many GCC extensions, we'll prefer
+    __thread to the more portable pthread_*-variants since it's
+    easier-to-use and read.  clang also supports this GCC extension
+    and we've always depended on __thread for random state, anyways.
+
+commit 498b16f7df5d92439ff87f94b8fa4fd87fab71b3
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-19 02:34:45 +0000
+
+    allow check-valgrind target on a single test case
+    
+    This is helpful for isolating individual tests under valgrind.
+
+commit d247102b612d403bb13ebcce627e4657d3a7c2df
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-19 01:55:12 +0000
+
+    attempt to support platforms without FIONBIO + ioctl()
+    
+    There may be platforms (e.g. GNU/Hurd) where FIONBIO
+    is not implemented for ioctl(), so avoid relying on it.
+
+commit 97309de8bcdd52fb87b0ef61249dd674265f6ce6
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-18 17:13:36 -0700
+
+    avoid usage file if mgmt sidechannel is inactive
+    
+    Similarly, if folks continue to rely on the Perl mogstored
+    daemon for whatever reason, avoid potentially conflicting and
+    having unnecessary wakeups/activity for usage file changes.
+
+commit ab61cee92d1c263149ca3c6bc5ce275c96951068
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-04-18 16:48:03 -0700
+
+    do not spawn iostat if mgmt sidechannel is inactive
+    
+    Some folks may want to test cmogstored as a GET-only HTTP
+    server and leave certain functionality to the original Perl
+    mogstored.
+
+commit 2b519f55f60125c1a753916c301b328c803f013c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-26 17:06:09 -0700
+
+    disable in_queue assertion checks
+    
+    Since the queueing system is proven by now and we're more
+    familiar with how things work in a multi-threaded environment,
+    these checks are now redundant.
+
+commit 3e9075af56297f4d35ec1c66e3c2c8eb56f8dc59 (tag: v0.3.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-27 01:10:52 +0000
+
+    test/cmogstored-cfg: remove unused variable
+    
+    Unfortunately not auto-detected in our test cases...
+
+commit 3591dadfa8533ad1533c2f52077a2df2804b96e4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-26 09:26:43 +0000
+
+    cleanup interrupt disabling/enabling
+    
+    We disable interrupts earlier so folks/scripts that are
+    trigger-happy with sending signals won't cause us to use
+    default signal handlers on us before we're ready.
+
+commit f080032dfa26662e5235e7db9e57cce2bd14a3d3
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-26 09:14:01 +0000
+
+    test/http: skip entire test if missing IO.copy_stream
+    
+    Calling teardown right away can lead to a race condition
+    where the signal handler isn't ready.
+
+commit ebe4812faf8e7a8f33b677e3b618e5b1bbe987b2
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-26 09:07:36 +0000
+
+    support SHA-1 digests over sidechannel
+    
+    SHA-1 performance is acceptable on modern systems nowadays, and
+    some users may have existing SHA-1 checksums from existing
+    systems (e.g. git) that make it possible to import existing
+    checksums into the database.
+
+commit 10c75b0d61b7f57b9b00b7fd811c77d60a131540
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-25 09:22:10 +0000
+
+    use generic gc module for MD5 from gnulib
+    
+    This will allow us to add support for SHA1 (and other
+    algorithms) more easily in the future.
+    
+    This also enables building against libgcrypt in case libgcrypt
+    gains optimized ASM routines or if users want a smaller binary.
+
+commit c454730febd2ad584ef7c2f4b0459af5cc71c551 (tag: v0.2.2)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-20 01:41:20 +0000
+
+    fix build on old glibc where _ATFILE_SOURCE is needed
+    
+    _GNU_SOURCE will define _ATFILE_SOURCE on older CentOS machines
+    This change is also tested on FreeBSD 9.0 and does not break
+    existing dirent.h usage in svc.c
+
+commit 2c39d7e86ce9c1ba561ca524699396730e8e212e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-19 13:39:47 -0700
+
+    README: add link to the NEWS.atom.xml feed
+    
+    This makes it easier for subscribers to be notified of new
+    releases.
+
+commit f25b7f5cc6fc3e752e3943aa82e67a3cfdf5d21d (tag: v0.2.1)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-20 00:50:14 +0000
+
+    setproctitle_noop: fix build for Debian GNU/kFreeBSD
+    
+    Ugh, why am I supporting this platform at this time?
+
+commit 31f53913059adc8adfe5477811b347e85f2e1d48
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-20 00:38:56 +0000
+
+    build: profile-guided optimization targets
+    
+    The results are currently _completely_ unbenchmarked, so I have
+    no idea if I'm using PGO correctly, yet...
+
+commit ef2eec33717bd2b21b130c65f524702875eb0535
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-19 23:35:49 +0000
+
+    digmd5: use size_t for loop counter
+    
+    Compilers should be able to optimize this away, but just
+    in case...
+
+commit aa1da337b6dbe36c27c7dc93be8a8af0e32e64cc
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-19 23:25:06 +0000
+
+    kill some unused function parameters
+    
+    No need to waste stack and registers for things we don't use.
+
+commit a281ac1f83742c4cdea53f5a9f60bca799a1768f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-19 22:55:07 +0000
+
+    http_put: log unlink errors to syslog
+    
+    If there are filesystem errors, hopefully syslog goes to
+    a different filesystem or even a different machine.
+
+commit be9f64c22db52d41b9be94737b40d320ad16e026
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-19 20:57:51 +0000
+
+    fix spt_init() call for platforms with setproctitle
+    
+    This broke the build on (non-Debian/GNU) FreeBSD systems.
+
+commit 1d1b982ccef65689f7785cae767c0f5d1193375f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-19 22:03:49 +0000
+
+    use __attribute__((malloc)) for mog_cachealign()
+    
+    This allows compilers to know the return value can't
+    be an alias of another pointer, so optimizations can
+    be applied.
+
+commit 648fe42c4387a3feb8032b50b5606c9cc1ca1f45
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-19 07:50:55 +0000
+
+    Rakefile: add task to update FRESHMEAT
+    
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+    FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT. FRESHMEAT.
+
+commit b8d74c8b2d8b19daf545f39826ce1e35d0a4a265
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-18 00:17:47 +0000
+
+    NEWS: remove extraneous blank line at the end
+    
+    Empty trailing lines are annoying.
+
+commit 59f429bdd3d7d3803a96d3674751d92317ac6129 (tag: v0.2.0)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-17 23:36:18 +0000
+
+    build-aux/coverage.mk: clean gcov files in nostd/
+    
+    And also any in bsd/ if they show up...
+
+commit 54af52697f4dfaec7943db5277d04dcb2f1bf627
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-17 22:04:39 +0000
+
+    setproctitle: avoid __attribute__((constructor)) when using gcov
+    
+    I really hate supporting this hack, especially since the issue
+    is fixed for newer gcc/gcov users.  However, many systems are on
+    older gcc and it takes a while for folks to upgrade, so it'd be
+    nice to encourage more coverage testing.
+    
+    This isn't needed for newer gcov + gcc in Debian testing/unstable,
+    but gcov/gcc 4.4.5-8 on Debian squeeze fails to pass argc/argv/envp
+    to ((constructor)) functions when using gcov.
+    
+    We'll drop this hack when support for Debian squeeze is terminated
+    (probably 2014-2015).
+
+commit 9356be7590f196a55d2f440fca124299964a1ff1
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-17 21:47:32 +0000
+
+    remove ENOSYS support for *at() and accept4()
+    
+    It's too hard to test ENOSYS fallbacks reliably and rebuilding
+    cmogstored on the correct platform should NEVER be a difficult
+    task.
+
+commit 92a35ce663d3c399656bc467cd507b63483cdfda
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-17 10:47:37 +0000
+
+    test/graceful_quit: less-timing sensitive test
+    
+    Valgrind makes things slow...
+
+commit f95736fedefcc1ccf1014e529658f86300857243
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-17 02:19:58 +0000
+
+    test/mgmt-iostat: avoid excessive threads on non-NPTL
+    
+    FreeBSD 9 inside a 512M KVM instance doesn't seem too
+    happy about spawning 400 threads...
+
+commit 42621da67f7dad9c0df2b5b232794dc1bd92040d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-16 15:03:06 -0700
+
+    additional path restrictions on HTTP PUT creating dirs
+    
+    We don't want accidental /dev* directories being created
+    due to misconfiguration.  This can help prevent accidental
+    configuration errors from spilling over or going unnoticed.
+
+commit cc5a1fc874f7e6c3b1518e3a30ef24d9d7f3db35
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-16 10:33:54 +0000
+
+    auto-generated ChangeLog should be more descriptive
+    
+    It's not really useful given git, nowadays...
+
+commit e6e17ad125c98b8cabf65c567e0d0092a4a9c35b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-16 10:25:28 +0000
+
+    cmogstored: disable short non-standard CLI switches
+    
+    Forcing ourselves to be more descriptive...
+
+commit 645082a6536321913b053566c3da29439105a2bc
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-16 01:37:56 +0000
+
+    HACKING: update for less-common tools we use
+    
+    Sometimes I forget what's needed when using new environments, too.
+
+commit f24066e5f576ce64b20950f086133e2ba06a9fae
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 18:03:08 -0700
+
+    add nostd/README to the dist tarball, too
+    
+    We want everything in the git repo in the tarball, too
+
+commit e62a9e832c9f18b46bb7e9237b125d1fd33f1cec
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-16 00:47:19 +0000
+
+    add valgrind.supp to dist tarball
+
+commit 3fe82a04d06cea6ee49e30e3909ad0a85389055f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-16 00:38:27 +0000
+
+    manpage: clarify email address and use HTTPS for GPL link
+    
+    In case some oppressive regimes want to crack down on folks
+    reading GNU.org...  Too bad the CA system is broken.
+
+commit dcd7565b3156f8f191072180cb32ee9296bddf84
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 16:50:30 -0700
+
+    test/graceful_quit: fix whitespace damage
+    
+    Oops :x
+
+commit 48341457301239725eddc585f712efd784c54345
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 23:46:42 +0000
+
+    test/graceful_quit: fix and speed up test under GNU/kFreeBSD
+    
+    No need to repeatedly yield (due to small skbs) because
+    we already checked for graceful shutdown.
+
+commit 4684050a21fb7a1ac27becf3936373c48024d7cb
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 16:29:57 -0700
+
+    nostd: improved build and separate lib for NOSTD_CFLAGS
+    
+    We don't want a redundant CPP macro for HAVE_SETPROCTITLE,
+    so we'll just bundle setproctitle (and anything else we'll need)
+    into a noinst library.
+
+commit e612507a5b407fe176adcea1d8b3ad6695a7de3f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 16:29:56 -0700
+
+    setproctitle: use matching prototype for spt_init()
+    
+    Found with -Wstrict-prototypes on gcc 4.6.3:
+    
+      nostd/setproctitle.c:146:1: warning: function declaration isn’t a prototype [-Wstrict-prototypes]
+
+commit 5229b8a2c257e6086b1a2bf0764ec4940c97112a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 16:29:55 -0700
+
+    setproctitle: avoid dup prototype in __GNUC__
+    
+    No need to redefine a prototype if it's already
+    declared, this fixes a compiler warning for me when
+    using gcc 4.6.3 with -Wredundant-decls:
+    
+      In file included from cmogstored.c:7:0:
+      nostd/setproctitle.h:23:6: warning: redundant redeclaration of ‘setproctitle’ [-Wredundant-decls]
+      nostd/setproctitle.h:19:6: note: previous declaration of ‘setproctitle’ was here
+
+commit c0630dd152957de54685720526fa6036a72f58ce
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 16:29:54 -0700
+
+    README: various doc updates on features
+
+commit da0541025e9a4a9ad1414117ca237dec45dd9121
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 21:10:55 +0000
+
+    valgrind + setproctitle and graceful quit workarounds
+    
+    Changing the process title doesn't seem to work while
+    using valgrind (which seems to control the process title for
+    itself), so we can't test for it on Linux.
+    
+    We also need to wait longer for listener shutdown to take
+    effect when running under valgrind.
+    
+    Also, we need a suppression file to quiet valgrind warnings.
+    The setproctitle() implementation harmlessly keeps strings
+    around until process exit.
+
+commit b2e1264cf41c339f1ff4ad58d49ac9c4958aa02a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 13:46:34 -0700
+
+    graceful quit closes listen sockets ASAP
+    
+    This allows another server to be started without waiting for
+    connected clients to reconnect.  While we're at it, refactor
+    this to avoid redundant code.
+
+commit 993a6f929c352c4f640baf5eb734285b7a2a69d1
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 13:46:33 -0700
+
+    set process title at graceful shutdown
+    
+    On GNU/Linux, this adds the setproctitle() function as implemented
+    by the libnostd project:
+    
+      http://www.25thandclement.com/~william/projects/libnostd.html
+
+commit 8dfde57920bca7cdc70e9dccfb632028c2395979
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 09:51:01 +0000
+
+    httpget deserves its own fd_type enum
+    
+    Hopefully things are less error-prone this way.
+
+commit 0e615c0d127b0f0d708445bd9901f38c421d7dec
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 09:43:26 +0000
+
+    ensure graceful quit and memory release of GET-only HTTP
+    
+    Found by valgrind.
+
+commit db86a9e7a8a7ba1efd398a862fe415cb3ce4e7ec
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 09:36:28 +0000
+
+    http: fix uninitialized mem access for non-GET/HEAD reqs
+    
+    Not only we have to be careful about not changing a
+    bit, we also need to be careful about actually setting
+    it for current cases...
+    Found by valgrind.
+
+commit 294a793a91cbfc67699e90d7b4b42eaaa22c9d37
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 09:22:48 +0000
+
+    limit accept() threads per-process if workers are used
+    
+    We don't want too many threads running accept() on one
+    process because it can lead to unfair load balancing.
+    This unfairness is difficult to avoid due to process/thread run
+    ordering at startup and the wake-one behavior we rely on.
+    So we just cut down on acceptors to minimize contention
+    for the listen queues in this case.
+
+commit f013cada909c2d54ed0377262d3ec6536c263216
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-15 07:45:03 +0000
+
+    alloc: use fixed 8K buf for fs_buf again
+    
+    Sizing the buffer according to the L1 probably doesn't help if
+    we want the kernel doing readahead while we're running
+    md5_process_bytes().  So pick a smaller buffer and commit less
+    memory in luserspace.
+
+commit d44ac28f21e63759027457af0a5b234db85478e4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-09 11:46:12 +0000
+
+    test/cmogstored-cfg: fix test with broken ps
+    
+    Or rather, we skip this test properly...
+
+commit 554a9eaba4de89b7f48f80e7f621748adf4b7d49
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-09 11:46:10 +0000
+
+    test/cmogstored-cfg: fix missing require under 1.8
+    
+    StringIO is required somewhere else under 1.9...
+
+commit 7b4fb353b8de9f1d4b4d746b70fd11bc69cf636a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 19:39:25 -0700
+
+    support for httpgetlisten config directive
+    
+    This makes it easy to support read-only HTTP traffic on a
+    different listen port.
+    
+    This reduces listen queue contention and allows using iptables
+    to block off DAV traffic from certain hosts while serving
+    freely.
+
+commit fcbe015155f0cbbfc45a152192f5bd6a9c6b03b8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 17:53:30 -0700
+
+    test handling of the "server" configuration option
+    
+    We'll ensure "server=none" setups will disable HTTP support
+    entirely.
+
+commit 340ea0d698b7b9f6197d4caaeaac6c0e7a603301
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 17:29:45 -0700
+
+    cfg: test for --multi feature
+    
+    We can support multiple config files (and thus multiple MogileFS
+    instances) in a single process.
+
+commit 3905252f8af21ad8e0de3a907b7b59cbe2cc881c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 23:52:08 +0000
+
+    test/mgmt: speed up test when run under valgrind
+    
+    We only chose a large size to force serialization
+    in testing.
+
+commit 610005513249eea5da18e03defc91bbf295ec3bf
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 16:02:25 -0700
+
+    optional --worker-processes=NUM feature
+    
+    This setting this to a positive value ensures we stay running if
+    there are any remotely triggerable crashes.  Hopefully users
+    will still send (good) bug reports in this case so we can
+    fix them.
+    
+    We may also be able to use this feature to reduce unavoidable
+    contention in some places, too:
+    
+    * kernel FD table
+    * epoll/kqueue descriptor
+    * global active queue
+    * malloc()
+
+commit ccdea5e664f71080578d0e188273a136e3498e42
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 22:23:32 +0000
+
+    fsck_queue: quiet down a sparse warning
+    
+    sparse cares about the difference between NULL and 0, even
+    if most platforms don't.
+
+commit 23c9035bdb5731720592913ba6cc3ca01f499ea4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 22:02:35 +0000
+
+    test/mgmt-iostat: close client before sending SIGQUIT
+    
+    Otherwise we could wait forever for buffered output.
+
+commit 14d7a445964f28fce37de9c4b9244f97623f3e60
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 19:54:00 +0000
+
+    tests: add check-valgrind test target
+    
+    This hopefully helps us remember to run valgrind
+    more frequently during development.
+
+commit 6905b41dba7a19f50458a6a9bb6af16dedd1e2cb
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 19:52:28 +0000
+
+    test_helper: yield the CPU harder when yielding
+    
+    We need to try harder to let the other processes
+    (especially valgrinded ones) run longer during
+    testing.
+
+commit d4b86df508c852e40762f8e4a7f2a6cea39b5da3
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 19:48:44 +0000
+
+    http: fix memory leak when rejecting large requests
+    
+    Found by valgrind.  This bug was introduced in
+    commit 7f99c180d0b9db55e2984721f96b93f28fc5757b
+    (http: allow headers up to UINT16_MAX in size)
+    when we gained the ability to accept large HTTP headers
+    but never made it into a release.
+
+commit d1cb76caa2d3ffd9a8c740f3bdd9e120763a9947
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 19:14:07 +0000
+
+    fsck_queue: likely branch come first in queue lookup
+    
+    Putting the likely branch first allows potentially better
+    cache locality, but we're still avoiding __builtin_expect
+    in infrequently called code.
+
+commit cdf2f375d1483b12ad4649d4ea9388dcbedef382
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 17:46:04 +0000
+
+    ioprio: avoid gettid() syscall usage
+    
+    Passing "0" means the current task (not necessarily PID) in the
+    Linux kernel.  Since Linux internally uses tasks for both our
+    processes and threads, the current task is our current thread
+    in userspace, not our current process ID.
+
+commit dd0f918a982177b33091a9d94cc4ba89c7f7c28b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 17:33:48 +0000
+
+    http_get: try to sendfile larger chunks at once
+    
+    Let our socket buffers throttle us instead of throttling ourselves.
+    We have many threads so the OS can also deschedule us if we're
+    hogging disk I/O bandwidth, but serving HTTP requests is a high
+    priority compared to sidechannel requests like MD5.
+
+commit 90cb3f538a530906ee2963c99dd83f3d7c3201a3
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 17:29:33 +0000
+
+    less fairness, more throughput for MD5
+    
+    Since we have many threads, avoid checking for idle clients as
+    frequently and do more I/O in the inner loop of our MD5 handling
+    routine.
+
+commit 96f5a9dbd4c83d0a1a1092418e0eed6c3b9a5760
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 17:27:13 +0000
+
+    ioprio: re-inherit priority based on niceness on restore
+    
+    fsck + MD5 requests will reinherit I/O priority based on
+    CPU niceness if we restore I/O priority.  Previously we
+    ignored niceness when setting I/O priority.
+
+commit 16fd5c747ed3690ac01e4142480c30efee33b41b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 09:29:29 +0000
+
+    mgmt: drop I/O priority for MD5 fsck requests
+    
+    Since Linux 2.6.13+, I/O priorities may be changed (within the
+    best-effort scheduling class) without needing root privileges.
+    So we'll temporarily lower I/O priority when we have a dedicated
+    thread handling MD5 requests (for fsck).
+
+commit 8e9f3b4ad43b179b0d50f466db7001bbe28cf207
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 08:24:32 +0000
+
+    fsck: limit per-device MD5 requests for fsck users
+    
+    fsck is a low-priority task, so try to limit it to a single
+    active request per st_dev.  This also means we pin and dedicate
+    a thread to it to run it as fast as possible.
+
+commit 4da0456ec3e92c55b5866ae6c170da62f18bc77c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 06:16:33 +0000
+
+    mgmt: just let the kernel manage socket buffers
+    
+    Small buffers seem to trigger weird starvation issues on
+    my system which slows down MD5 processing significantly.
+
+commit d0cfc6df71befc100b72a4c56300131c7d71ee4f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 05:32:35 +0000
+
+    queue: active clients maintain thread affinity
+    
+    We want to avoid global resources like the active queue
+    as much as possible.
+    
+    Unnecesarly bouncing of clients between different threads
+    and contention for the active queue lock hurts concurrency.
+    This contention is witnessed when parallel MD5 requests
+    are serviced during parallel fsck runs.
+
+commit e054e939255af90f2164318742db55517231e15b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-14 04:47:52 +0000
+
+    mgmt: add optional "reason" field for MD5 reqs
+    
+    We'll want to be able to internally prioritize expensive
+    requests that can hammer the system.
+
+commit 93b3f4c03933fe11ca5d00c8262b79b192fc599c
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-12 16:31:37 -0700
+
+    change thread count based on number of dev* entries
+    
+    This matches the behavior of Perl mogstored.  Some
+    systems (like one of mine) may have many major devices
+    and fewer devices dedicated to MogileFS storage.
+    
+    This really *should* be tunable, though...
+
+commit f108dac998b4d474b6a8ac1ce0f226caaf836c02
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-12 14:50:25 -0700
+
+    alloc: size fs_buf according L1 size
+    
+    The previous hard-coded 8K value is too small and results in
+    excessive syscalls.
+    
+    Whenever we use fsbuf, we'll quickly write to a memory location and
+    reread it immediately afterwards, so keep it smaller than the L1:
+    
+    - read(file, fsbuf) + md5_process_bytes(fsbuf)
+    - read(sock, fsbuf) + pwrite(file, fsbuf)
+    - read(sock, fsbuf) + md5_process_bytes(fsbuf) + pwrite(file, fsbuf)
+    
+    We shave off a page for any related data (mog_fd, md5_ctx) we want
+    to keep hot in the L1.
+
+commit 2a83dc480e888541532fabf427af6664560b1e0f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-09 19:12:27 -0800
+
+    use POSIX_FADV_NOREUSE for MD5 digest generation
+    
+    During MogileFS fsck, MD5s will be requested for many files
+    in a short time period, potentially invaliding the page cache
+    for files that we actually /want/ to remain in cache.
+    
+    Since fsck is a low-priority task, hint the kernel to drop
+    pages after reading so the kernel page cache can be used for
+    files that actually get read frequently.
+    
+    Note POSIX_FADV_NOREUSE is currently a no-op in Linux 3.3
+    kernels, but this feature is currently in development.
+
+commit bd1815b39973852c9656d81c1277967def86e387
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-09 19:09:23 -0800
+
+    rename mog_fadv{seq -> sequential} for clarity
+    
+    This matches the underlying constant so things are
+    easier to read.
+
+commit 8099e2a99a88f7383545a684ecb9beb75141f1b0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-09 09:44:54 +0000
+
+    TODO: remove snprintf() item
+    
+    It's not completely accurate, syslog() does too, and
+    I'd rather not avoid that...
+
+commit 0a66ba54d4f78cb53f438f6ec0d0adeb768bc132
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-09 01:23:24 +0000
+
+    try to keep activeq_lock on its own cache line
+    
+    We want locks away from the actual data it protects so updates
+    to the lock (or data) don't unnecessarily trigger relatively
+    SMP memory synchronization.  This means nothing for CPUs with
+    128 byte cache lines, but should help CPUs with 64/32-byte
+    cache lines.
+
+commit d2e281bb9718a7a4a49fb87a1851123bbce2a2dc
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 16:52:27 -0800
+
+    http: avoid active queue on initial GET/PUT chunk
+    
+    Try to drain (or fill up) the socket as much as possible.
+    We want to be able to be able to do some work without
+    putting additional contention in the active queue and
+    potentially bouncing data between CPU caches.
+
+commit 778ad9ce3793620d30345d7ba57ec656f4b00ed0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 16:46:33 -0800
+
+    test_helper: increase sleep time for Valgrind
+    
+    Valgrind makes things run more slowly and some of
+    the graceful quit tests are unfortunately open to
+    race conditions.
+
+commit 05949556a9b35383dd58285e5886f100b42daa3a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 13:53:56 -0800
+
+    http_get: send 1M chunks via sendfile
+    
+    This matches the size used by MogileFS replication workers,
+    so it should keep network buffers fuller and hopefully
+    cause the kernel to do more readahead.
+
+commit 172b8ee9aa866035c395882f4250d1a04a1ddb09
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 13:26:11 -0800
+
+    mgmt: make MD5 generation more aggressive
+    
+    Instead of reading small chunks at a time, we'll loop and
+    run over 1M for each loop iteration.  This matches what the
+    proposed mogstored patches do.
+
+commit 2e583e72abe4f1aaa40d25c3c9f958c53c3dcb45
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 12:38:59 -0800
+
+    http_put: aggressively drain socket on PUTs
+    
+    We're unlikely to block on filesystem writes (as they're
+    buffered), so attempt to drain the socket as fast as we can
+    without yielding the current thread.  This means we free up
+    kernel memory for SKBs quickly (and move it to the page which
+    can be committed to disk).
+    
+    We also avoid unnecessary bouncing of the http and file mog_fd
+    structs between threads/cores on a multi-core system, improving
+    cache locality.
+
+commit f2723caff428fc50b8c3a1e39d800aca25639b50
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 11:24:41 -0800
+
+    Makefile.am: comment on why test_tmpdir is needed
+    
+    In case I forget to check git history.
+
+commit 8a43b780f43eb7fc2b6fae9a8b29b82734a6a395
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 11:04:03 +0000
+
+    Makefile.am: fix release-check
+
+commit 83c5b887d63c21b4aebc2afe5dd5e4ba73053e8d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 10:57:34 +0000
+
+    ENOSYS testing for accept4()
+    
+    It's probably worth it because users end up compiling on new
+    systems and deploying on old system.  The filesystem components
+    are much more work...
+
+commit ff8c72fe8728be8da1ea0728484724de7ab0bb57
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-08 09:57:42 +0000
+
+    use a temporary file for PUT if possible
+    
+    In all cases except requests with Content-Range, a temporary
+    file may be used to make PUT requests atomic.  This prevents
+    partial .fid files from appearing and potentially confusing fsck
+    after server crashes.  This also prevents MD5-verified requests
+    from clobbering existing files and also from wasting disk space.
+
+commit e6ff08b223834ad10b8592550041275fdecaab6a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-07 09:47:02 +0000
+
+    accept: several cleanups for accept4() handling
+    
+    Avoid checking ENOSYS every single the function is called time.
+    It's needless cycles wasted and we can redirect the function
+    atomically with a pointer assignment (word-sized assignment
+    is atomic on all platforms that matter).
+    
+    We should also check for SOCK_* macros if we need to use
+    accept4(), too, since it's possible the C library failed
+    to define them in headers even though the accept4() function
+    is available.
+
+commit 7b3df976c01e2eacf37cf98e76750c581b6e8df8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-07 09:33:03 +0000
+
+    properly name mog_rbuf_detach() function
+    
+    "detach" makes more sense than "defer" here.  This function
+    detaches a per-thread buffer from it's owner.
+
+commit d459abebb918e0fb6a568004997a908e98eec25e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-05 20:00:26 -0800
+
+    stop taking memalign overhead into account for rbuf
+    
+    We don't actually free() these regions commonly in real-world
+    situations and the added code complexity only scares people.
+
+commit 72d5da1dc6e0cf4ed57d798531e85fa3cbbd6d6d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-05 19:29:16 -0800
+
+    rely on posix_memalign() for fsbuf allocation
+    
+    It's much less code and we don't care to release memory
+    for this frequently enough to care.  Also, mmap.
+    
+    Users intent on continuing to use mmap may use
+    MALLOC_MMAP_THRESHOLD_=8192
+
+commit 1d8f75976a2516f93cbf70fe9e1a8979583929f9
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-05 19:20:21 -0800
+
+    avoid aligned alloc for infrequently written areas
+    
+    Aligned allocations are wasteful and tend to fragment the heap.
+    They only benefit us when dealing with frequently _written_ data
+    that we don't want unnecessarily shared/bounced between threads.
+    So swap mog_cachealign() for xmalloc() wherever we have
+    infrequently-written data areas.
+
+commit 5cb6826b3a6f974d720d8f9d1589b6c06f22bf52
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-05 19:16:21 -0800
+
+    make mog_open_file_read() less bug-prone
+    
+    Avoid blindly stashing the pathname of the file into the
+    mog_file struct (preferring to leave it NULL).  This prevents
+    from misreferencing it later (in a different thread/stack).
+
+commit 728737a622e6edcca4767c9449514e931eb4f950
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-04 10:06:36 +0000
+
+    test_helper: use TCP_NODELAY for test sockets
+    
+    We do a lot of trickle tests, so make them more deterministic
+    by sending out the data sooner rather than waiting for an ACK.
+
+commit aa30c580ec9b9c99b1226f9fea4a60e1c2ba7cc9
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-04 10:03:06 +0000
+
+    test_helper: increase sleep for valgrind tests
+    
+    valgrind makes cmogstored run much more slowly so we need to
+    wait longer for some of the trickle tests.
+
+commit 7f99c180d0b9db55e2984721f96b93f28fc5757b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-03 10:38:55 +0000
+
+    http: allow headers up to UINT16_MAX in size
+    
+    Some folks with reproxy setups end up forwarding large headers
+    (e.g. session cookies) to mogstored backends.
+    
+    Since our per-client HTTP buffer offsets are uint16_t,
+    UINT16_MAX was chosen.  Perlbal actually allows 100K, but I
+    doubt anybody would ever actually need that much.
+
+commit e9fada6db32ad1f2402e5993c6eb6fec55d4c174
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-03-03 09:13:22 +0000
+
+    rbuf: use rcapa instead of rsize correctly
+    
+    We didn't have rcapa in the past, but now we do, so use it.
+    rsize is only used for stashing buffers in per-client (fdmap)
+    areas.
+
+commit 5112629a1c0a4612ede6b031aa3c302f128e9ff4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-28 05:12:10 +0000
+
+    unify rbuf sizes for http and mgmt
+    
+    They're the same, so it should result in less fragmentation
+    resizing if we _keep_ them the same moving forward.
+
+commit 2b01fb91ebcc452a7935c0e0bdbfad1951e594ba
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-27 15:49:27 -0800
+
+    fs: increase internal maximum path length to 255
+    
+    We already reserve an extra 8K for *printf/syslog functions
+    in stdio, so using up to 512 bytes of extra stack space
+    shouldn't be an issue in a leaf function.
+
+commit 20aa8c395fc18f845c7247c20fc5b03fa99783ae
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-27 15:49:26 -0800
+
+    http_put: log syscall failures to syslog
+    
+    We need to be able to alert the BOFH to filesystem
+    errors if PUT fails.
+
+commit 20428cf11e06b5d9854b3f79d27eb3844e768e96
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-27 21:11:12 +0000
+
+    rbuf: add rcapa element to struct
+    
+    This stores the original size of the struct and makes
+    it easier to know how much of it is used.
+
+commit 920ba3f726684a3c95d323669004ab456c834b58
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-26 10:10:51 +0000
+
+    dev: small cleanups
+    
+    No point in using goto to just jump to the next statement,
+    and need to trigger assert() on EBADF
+
+commit a5055d16b971de5f78b626cff91a6651e383d1c8
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-26 08:53:37 +0000
+
+    fdmap: remove redundant posix_memalign wrapper
+    
+    We don't need to align to the padded size, cache-alignment
+    (usually 32 - 128 bytes) is enough.
+
+commit 6f5b1a26dbc5569aa24d406501b41fbe23984d28
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-26 00:15:22 +0000
+
+    maxconns: explicit underflow check
+    
+    rlim_t is unsigned on Linux, so it can never be negative,
+    however rlim_t may be signed on some systems, so preserve
+    the check but cast to int just in case.
+
+commit 96a896659df7fa32f0849dabeac997d26175b424
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-25 12:23:29 +0000
+
+    test/cmogstored-cfg: fix test when running under valgrind
+    
+    valgrind spews to stderr, so we can't rely on the first line
+    being useful to us.
+
+commit 1ab6640be2c1dd28eecf9ec160c67b672ab3005d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-25 12:20:05 +0000
+
+    free thread-local buffers in main thread at exit
+    
+    Keeping these buffers around is harmless since they're only
+    allocated for graceful shutdown and quietly released anyways
+    during shutdown, but this prevents valgrind warnings.
+
+commit e5991473a91697a4924530b87051c764e538ce15
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-25 11:41:00 +0000
+
+    implement graceful shutdown for outstanding requests
+    
+    By going into single-threaded mode, we can drastically simplify our
+    shutdown sequence to avoid race conditions.  This also allows us
+    to not have additional overhead during normal runtime: as all the
+    shutdown-specific logic is isolated to only a few portions of
+    the code.
+    
+    Like all graceful shutdown schemes, this is one is still vulnerable to
+    race conditions due to network latency, but this one should be no worse
+    than any other server.  Fortunately all requests we service are
+    idempotent.
+
+commit 025e09f5be3d1a42a5f585f80b18d5947da5e766
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-24 01:26:04 +0000
+
+    mog_queue_stop() takes a parameter of a queue to keep
+    
+    We will maintain one queue during shutdown, and that will
+    be the notify queue.
+
+commit fe5fb3860228497b0fa31f2c87e925de6be215d4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 22:05:15 +0000
+
+    run tests in a TMPDIR in the top-level builddir
+    
+    /tmp is often tmpfs nowadays, and our tests that rely on iostat
+    cannot report statistics for tmpfs.  So hopefully our build
+    directory is a regular directory on a regular filesystem.
+
+commit 30469a2986cacba23511730313620fec73600b85
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 20:09:55 +0000
+
+    queue_step: more descriptive assertion
+    
+    In case we trip ourselves up...
+
+commit 6cd213c3095b439ef8836bafbc23557e1d3f67f6
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 19:47:06 +0000
+
+    doc updates for backwards/forward-compat
+    
+    We rely on a lot of newish syscalls that don't exist
+    everywhere (even in the GNU/Linux world) yet, so that's
+    a bit painful at times...
+
+commit 4937643ce05aee52b18fc97f54011a9cce395d4f
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 10:08:05 +0000
+
+    test/cmogstored-cfg: fix tests for systems w/o /var/mogdata
+    
+    We shouldn't rely on the default document root existing
+    on the test/dev machine
+
+commit 482cd0d8aafbbd0077986528fd6c3321ae04a1dd
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 09:50:17 +0000
+
+    iostat: cleanup parser state/enum
+    
+    No need to invent our own enum for the iostat parser,
+    it's just like the mgmt/http parsers.
+
+commit 1b2c1bb4ac4f7a1ac3842cc931e3e3a97f806044
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 09:34:23 +0000
+
+    notify: pull active queue in main loop
+    
+    This should make iostat work nicely on FreeBSD once again
+    since we rely on a weird cross-thread notification scheme
+    there.
+
+commit 752ce8833f5da66c52ba00886edb54cf02b49141
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 08:02:59 +0000
+
+    cleanup mog_fd insertion/initialization for queues
+    
+    This will help us avoid bugs if we're transfering mog_fd
+    structs between queues.
+
+commit 073148d4d3cd6026330045a5214ea459b31a80a4
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 06:55:44 +0000
+
+    avoid scanning the entire fd_map for queues at shutdown
+    
+    Eventually we may benefit from multiple queues and
+    configurable queue counts, so just use some of the
+    dead space for storing all queues in a linked-list.
+
+commit 9a8e11a3d12db94ab7b5e6990326cf344d775bdf
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-23 03:32:46 +0000
+
+    iostat: move this to the notify queue
+    
+    There's no point in having this run in the busier worker
+    threads which have less stack.
+
+commit 8d0eae7fd0eb8081c7be21afe31a65157dedb118
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-13 20:30:55 +0000
+
+    improve error handling for daemonization + kqueue fix
+    
+    We need to call mog_notify_init() after daemonization for
+    kqueue.  Unlike normal file descriptors, kqueue descriptors are
+    automatically closed on fork(), so we have to create the notify
+    kqueue after forking.
+    
+    So take this opportunity to improve error handling during
+    daemonization by avoiding the daemon(3) function.
+
+commit 1b9c2a4b56f09ee53a7507db6bb34c61080f93d7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-13 20:21:05 +0000
+
+    pidfile: fix assertion failure triggered by stale PID files
+    
+    We forgot to expand the path to the pidfile if we had a stale
+    pidfile.  Additionally, the pidfile must still exist when we
+    canonicalize its pathname.
+
+commit 589580c840efd0ca66480940f56b9069ec2b1db0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 23:55:10 +0000
+
+    notify.c: simplify usage file refresh logic
+    
+    It's less code to always generate usage files when refreshing
+    devices because of the cost of readdir(3).  Also, we'll always
+    attempt to drain notify pipes ASAP instead of deferring.
+
+commit aa1c175edb556c396b79519fabda3e3ce2508aaa
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 23:17:58 +0000
+
+    notify: fixup uinitialized notes
+    
+    Argh, oops.  Thank you valgrind.
+
+commit 484b5dec1460aa5a6056ba5d171eeeac2d710c96
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 22:40:58 +0000
+
+    notify: fixup uninitialized variables
+    
+    Oops.  There should probably be a better API for
+    initializing mog_fd structures...
+
+commit 9bc56d7cd94e70cf663f99f59b449ea9ffdfd0d7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 11:21:43 +0000
+
+    notify: use compare-and-swap for setting notes bits
+    
+    Based on GCC documentation[1] our previous use of
+    __sync_lock_test_and_set was non-portable.  CAS should be
+    more portable and easier to understand.
+    
+    [1] http://gcc.gnu.org/onlinedocs/gcc-4.1.2/gcc/Atomic-Builtins.html
+
+commit 3bb9ef85138913d176aa886eb12ccb3061e6cacc
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 11:10:14 +0000
+
+    notify: rework to use epoll/kqueue instead of select()
+    
+    Our graceful shutdown handling will likely go into the
+    main/notify thread, so that is a poor fit for select().
+    poll() is unusable for pipes on *BSDs, but we already
+    know kqueue works on pipes without difficulty, so we'll
+    just use kqueue (and epoll).
+    
+    We can eventually pick up kevent and eventfd so we can
+    avoid pipes for notifications, too.
+
+commit 3d763a679758654ff588dbbb39088f45d5406758
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 09:04:22 +0000
+
+    notify: use MOG_DISK_USAGE_INTERVAL env instead
+    
+    This name is shorter and matches a submitted patch for MogileFS
+    proper.
+
+commit d5305d41b7e797abb719fd4b98b967df9769b56f (pu)
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 08:53:03 +0000
+
+    queue: allow configurable timeout
+    
+    It looks like we'll want to be able to sleep an
+    interval that's not "forever".  We can replace
+    select() in the main loop with epoll/kqueue to
+    simplify our (eventual) graceful shutdown logic.
+
+commit 65790eccad0cb5c0ed50e1bf1859283c28a7622b
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 02:40:50 +0000
+
+    queue_loop: simplify blocking wait wakeup logic
+    
+    We use thread cancellation to shut down our queue
+    processing threads so we don't have to rely on signals
+    or cross-thread close() + EBADF from an epoll/kqueue
+    descriptor to know our queue is due for shutdown.
+
+commit e098ef16167eadfb478f2fa2a07b3bfb17ea762a
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-22 02:22:44 +0000
+
+    add new mog_svc_dev_shutdown() method
+    
+    This shuts down any iostats subscribers on graceful exit.
+
+commit 665e82cf45a6c40577815da0c700e6d1a33f71ae
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-21 22:00:15 +0000
+
+    svc: rename dirfd -> docroot_fd for readability
+    
+    It's a more meaningful name and doesn't conflict (mentally)
+    with the dirfd(3) stdio function (which we also use).
+
+commit 78272b37fe85e950e45d518f76402650694262bc
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-21 20:30:26 +0000
+
+    TODO: add item to investigate fallocate, fadvise is done
+    
+    posix_fallocate() will be tricky to support correctly because
+    it is emulated on some filesystems.  We also support multiple
+    filesystems in the same process, so we'll have to enable this
+    in a device-specific manner if at all...
+
+commit 9b820ae2eb0a95a0cfdbaa1494717060fbe254d6
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-20 16:22:56 -0800
+
+    activeq: factor out active queue insertion function
+    
+    Duplicated code is harmful for maintenance.  We may be able
+    to do an atomic compare and double-swap (cmp8xchg16) operation
+    in the future...
+
+commit ffabdc47e2c5e295d8c51e059d838a6b8b0b53d6
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-20 10:54:27 +0000
+
+    give advice to the kernel when doing sequential reads
+    
+    This is an extra, unnecessary syscall on hot caches.
+    
+    But with typical MogileFS storage machines having a 1:1000
+    memory:disk ratio, informing the kernel a file descriptor will
+    be used for sequential reads will improve access patterns on
+    rotational media.
+    
+    On current Linux kernels, POSIX_FADV_SEQUENTIAL doubles the
+    amount of normal readahead done.  We will not use
+    POSIX_FADV_WILLNEED here because it can block when doing memory
+    allocations for the page cache even if readahead itself is
+    asynchronous.
+
+commit ae7369492521aab603a4dbd87fa6aec9834ca2c6
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-20 10:11:36 +0000
+
+    redo mog_fd_put() and actually use it
+    
+    This forces us to invalidate the mog_fd structure before calling
+    close() on the file descriptor.  Eventually, this lets us
+    gracefully shutdown by scanning fdmap to invalidate old
+    connections.
+
+commit 22a3975e564168a7e6affd3f92a9ccb9e913362d
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-18 10:02:56 +0000
+
+    http: use internal svc flag to toggle persistence
+    
+    We want to be able to override keepalive/persistence
+    set by our parser if our svc is being shut down.
+
+commit 3bbf71f960630911e133edb4a4a9a8aa5e004eb7
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-18 09:16:04 +0000
+
+    remove FIXME targets for non-GCC
+    
+    We only support GCC and compatible compilers (e.g. clang).  Too
+    much effort to dirty up our code to support legacy compilers
+    almost nobody uses, especially when most of that is non-Free.
+
+commit fd2428590505ffa3e14dfa6df55520bbecff6231
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-17 21:44:31 +0000
+
+    tests: minor refactoring to reduce common code
+    
+    Also we'll have better splitting of test cases into fast/slow
+    portions.
+
+commit 6b47e8517ba04da10719b0fbfd9c6ccb7010d806
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-17 21:27:52 +0000
+
+    http: require PUT to be at least one directory level deep
+    
+    This prevent users from creating a top-level directory and
+    miscreating a "/devXXX" directory (e.g. if a machine is
+    misconfigured).
+
+commit 1b11089e9a3770fb1fb4763eacee3d0682c476c0
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-17 09:44:47 +0000
+
+    use inlineable functions for nonblock/cloexec
+    
+    Setting the non-blocking flag with the FIONBIO ioctl()
+    can be done safely and reliably with a single syscall
+    instead of two with fcntl().  This way we can avoid
+    the fcntl() wrappers used by gnulib.
+    
+    gnulib fcntl() tests are rather expensive at ./configure,
+    so I'm trying to find ways to avoid them.
+
+commit c74c98a551f3912de8b5f3519b49cbad257e9a8e
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-16 23:16:54 +0000
+
+    disable MKCOL support, PUT creates paths dirs instead
+    
+    This more closely matches the behavior of Perlbal/mogstored and
+    can lead to better performance.  Issuing repeated MKCOL requests
+    can be expensive (even with caching), so remove support for it.
+
+commit f63052147711e2bc650ded2ffea25cd81cc1f168
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-16 23:33:45 +0000
+
+    Makefile.am: use "prove" for Perl tests
+    
+    "prove" exits with an appropriate error code on test failure,
+    unlike "perl".
+
+commit ac145c8235626ff564bbcba4b6b606ac07caed41
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-12 18:00:42 +0000
+
+    INSTALL: add DragonFly BSD to the list of possible BSDs
+    
+    It supports kqueue.
+
+commit e9eb7ee9d5da70f1080edee5b8f2e3d9791f87a1
+Author: Eric Wong <normalperson@yhbt.net>
+Date:   2012-02-12 17:46:00 +0000
+
+    TODO: update with a few more items
+    
+    Some were mentioned in the source

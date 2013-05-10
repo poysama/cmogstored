@@ -1,0 +1,25 @@
+{
+	setproctitle-strdup-at-init
+	Memcheck:Leak
+	fun:malloc
+	fun:strdup
+	fun:spt_init
+}
+{
+	libkqueue-calloc
+	Memcheck:Leak
+	fun:calloc
+	obj:/usr/lib*/libkqueue.so.*
+}
+{
+	libkqueue-malloc
+	Memcheck:Leak
+	fun:malloc
+	obj:/usr/lib*/libkqueue.so.*
+}
+{
+	epoll-ctl-event-ptr-on-32-bit
+	Memcheck:Param
+	epoll_ctl(event)
+	fun:epoll_ctl
+}

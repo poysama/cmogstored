@@ -1,0 +1,43 @@
+Bootstrapping from the git repo requires GNU autotools, Gnulib and
+Ragel.  You will need "autoreconf", "gnulib-tool", "help2man" and
+"ragel" in your $PATH.  Most tests require "ruby" (1.8.7-p299 or later).
+GNU make ("gmake" on non-GNU systems) is not required for normal
+user builds and installation, but highly recommended for hackers.
+
+* autoconf - https://www.gnu.org/software/autoconf/
+* automake - https://www.gnu.org/software/automake/
+* Gnulib - https://www.gnu.org/software/gnulib/
+* help2man - https://www.gnu.org/software/help2man/
+* Ragel - http://www.comp-lang.org/ragel/ (parser)
+* GNU make - https://www.gnu.org/software/make/
+* ruby - http://www.ruby-lang.org/
+* git - http://www.git-scm.com/
+
+$ git clone git://bogomips.org/cmogstored
+$ cd cmogstored && ./autogen.sh
+
+Generally, the versions of these tools bundled with the latest
+stable release of Debian GNU/Linux will work.
+
+For Gnulib, we will use the latest git checkouts from:
+	git://git.savannah.gnu.org/gnulib.git
+
+For gcov code coverage reports, we rely on "gcov2perl" and "cover"
+from the Devel::Cover Perl module:
+
+* Devel::Cover - http://search.cpan.org/dist/Devel-Cover/
+  Debian users may install the "libdevel-cover-perl" package.
+
+Additional development tools we use:
+
+* valgrind - http://valgrind.org/
+* sparse - https://sparse.wiki.kernel.org/
+
+We also use Rake for pre-release checks, generating ChangeLog
+and NEWS documentation, and Nokogiri for generating the Atom
+feed for our website.
+
+Hack away!
+
+Email patches (git format-patch + git send-email) and pull requests to
+Eric Wong <normalperson@yhbt.net>

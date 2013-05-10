@@ -1,0 +1,82 @@
+event queues in cmogstored
+--------------------------
+
+Implementation details of cmogstored.
+
+There are 2 main classes of queues and 2 classes of thread pools in
+cmogstored.
+
+Multithreading is required for concurrent disk (and page cache) I/O.
+Most operations with cmogstored are not CPU-intensive, so pinning
+cmogstored to a single CPU or core via schedtool(1) /may/ even be
+beneficial.
+
+cmogstored is designed for disk-intensive operations where I/O latency
+is unpredictable and often high.  This design is susceptible to the
+"ping-pong" effect where per-client data gets bounced between different
+CPUs, so it may be suboptimal for CPU/L1/L2-intensive applications
+
+
+listen queue + accept() thread pool
+-----------------------------------
+
+Like all TCP servers, there is a standard listen queue for every listen
+socket we have (mgmt/http).
+
+Each listen queue has a dedicated thread pool running _blocking_
+accept(2) (or accept4(2)) syscall in a loop.  We use dedicated threads
+and blocking accept to benefit from "wake-one" behavior in the Linux
+kernel.
+
+There is one accept(2) thread pool for every listen socket.
+
+mog_queue thread pool
+---------------------
+
+epoll(2) (or kqueue(2)) descriptor is the heart of "struct mog_queue".
+There is one thread pool in cmogstored dedicated to sharing a single
+mog_queue object.  This design allows clients to migrate between
+different threads.  This is beneficial if one thread is blocked on disk
+I/O (including seeks), a thread will only service one client at a time.
+
+Currently the mog_queue is a singleton, giving it optimal fairness
+across the machine in worst-case scenarios at the expense of concurrent
+throughput.
+
+idle queue
+==========
+
+This is either an epoll(2) or kqueue(2) descriptor.  Unlike traditional
+poll(2)/select(2), epoll/kqueue easily allows clients to migrate between
+threads as client sockets become ready.
+
+To implement queue-like behavior, we rely exclusively on one-shot
+notifications (EPOLLONESHOT or EV_ONESHOT).
+
+active queue
+============
+
+cmogstored 0.4.0 and earlier used a SIMPLEQ-based queue but that was
+both more complex and /theoretically/ open to starvation given a
+perfect storm of idle time.
+
+cmogstored currently places an object back in the epoll/kqueue object if
+it is considered "active", as both systems internally to preserve
+ordering of unretrieved readiness events.  The practice of queueing
+"active" clients (clients which have not triggered EAGAIN) prevents
+starvation when a client pipelines requests to us.  It is analogous to
+the use of sched_yield(2) in purely multi-threaded designs.
+
+Queue flow
+----------
+
+Once a client is accept(2)-ed, it is immediately pushed into the
+mog_queue.  This mimics the effect of TCP_DEFER_ACCEPT[1] (in Linux)
+and the "dataready" accept filter (in FreeBSD) from the perspective
+of the epoll_wait(2)/kqueue(2) caller.
+
+TCP_DEFER_ACCEPT itself is not used as it has some documented and
+unresolved issues:
+
+  https://bugs.launchpad.net/ubuntu/+source/apache2/+bug/134274
+  http://labs.apnic.net/blabs/?p=57

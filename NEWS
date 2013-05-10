@@ -1,0 +1,258 @@
+1.2.1 / 2013-03-04 01:33 UTC
+----------------------------
+
+  This release only fixes an assertion failure during graceful shutdown
+  while MogileFS fsck is running with checksumming enabled.
+
+  This only affects users running fsck with checksumming enabled during a
+  graceful shutdown of cmogstored.  For upgrading cmogstored it is
+  recommended to:
+
+  1) stop fsck on the trackers (via "mogadm fsck stop")
+  2) wait for all tracker queues to drain and stop sending
+     fsck traffic to the affected host.  You may wish to
+     "!want 0 fsck" on all your trackers and wait for the
+     fsck workers to stop.
+  3) upgrade cmogstored (in place upgrade works)
+
+  There are also several code comment updates for internal
+  components of cmogstored which may interest potential hackers.
+
+1.2.0 / 2013-02-18 23:39 UTC
+----------------------------
+
+  This release suppors nginx-style binary upgrades via SIGUSR2.
+  The behavior of this process should match that of nginx:
+  http://wiki.nginx.org/CommandLine#Upgrading_To_a_New_Binary_On_The_Fly
+  SIGWINCH and SIGHUP are currently no-ops and may match nginx behavior
+  in the future.  They are not required for binary upgrades.
+
+  Slow/unreliable mount points (if you have them) should have less effect
+  on iostat sidechannel clients once the process is running.  Startup is
+  still slow with unreliable mount points, unfortunately.
+
+  Error handling is now graceful for thread creation failures and
+  systems lacking stdio memstream support (FreeBSD).
+
+1.1.0 / 2013-01-18 10:54 UTC
+----------------------------
+
+  cmogstored now works around an EPOLL_CTL_MOD race condition
+  in old kernels.  This workaround is unneeded and disabled on
+  Linux v3.0.59+, v3.2.37+, v3.4.26+, v3.5.7.3+, v3.7.3+ and v3.8+
+
+  FreeBSD users should no longer see ECONNRESET errors on
+  close(2).
+
+  Unnecessary mkdir/mkdirat syscalls are optimistically avoided on PUT.
+  MSG_MORE is used (instead of TCP_CORK) on Linux to avoid extra
+  syscalls.  We also avoid POSIX_FADV_SEQUENTIAL when returning
+  small responses.
+
+1.0.0 / 2012-12-13 08:38 UTC
+----------------------------
+
+  FreeBSD support is improved:
+  - ZFS support (tested on FreeBSD 9.0)
+  - Fix disk usage report on FSes w/ small fragment size (ZFS)
+  - faster graceful shutdown on kqueue()-based systems.
+  - systems lacking open_memstream() no longer misreports OOM on SIGQUIT
+
+  Thanks to Ask Bjørn Hansen for helping with the ZFS support
+
+  Linux:
+  - several bugfixes for handling of out-of-FD situations
+
+  There are also minor documentation and build improvements.
+
+0.9.0 / 2012-12-05 01:15 UTC
+----------------------------
+
+  This release handles out-of-disk-space errors from PUT and usage
+  file generation more gracefully.  Failed PUTs due to client-side
+  disconnects are also logged with additional debugging information.
+  There are also minor internal cleanups for shutdowns.
+
+0.8.0 / 2012-11-14 21:34 UTC
+----------------------------
+
+  HTTP connections remain persistent after a failed Content-MD5, this
+  prevents the MogileFS monitor from generating excessive TIME-WAIT
+  connections.
+
+  Linux only: Idle HTTP connections are automatically closed under FD
+  pressure from systems with too many trackers.  This adds zero
+  overhead unless the process runs out of file descriptors.
+
+  "server aio_threads = <digit>" is supported and attempts to mimic the
+  Perlbal interface.  There is no error reporting nor reporting of the
+  current thread count.  Requests are silently capped in the 1-100
+  (inclusive) range.
+
+  The "shutdown" command from Perlbal is also supported.
+
+  The Content-Range response header (for partial requests) was missing a
+  '\r' and thus not compliant with extremely strict HTTP parsers.
+
+0.7.0 / 2012-10-17 00:06 UTC
+----------------------------
+
+  This release fixes a boundary error in Content-MD5 trailer
+  reading+parsing when receiving chunked PUT requests of certain
+  sizes.  This bug was found while attempting to upload a
+  198689228 byte file using 16K chunks (using the Ruby
+  mogilefs-client 3.4.0 to send the Content-MD5 trailer)
+
+  There are also minor cleanups, new test cases and better error
+  reporting for ENOSPC errors.
+
+0.6.0 / 2012-10-04 09:05 UTC
+----------------------------
+
+  This release fixes a concurrency assertion failure affecting
+  sidechannel+checksum users.  This bug has existed since 0.2.0, but was
+  not noticed without the concurrency simplification in 0.5.0
+
+  There are additional test cases for checksumming and gnulib updates
+  for the tarball.
+
+0.5.0 / 2012-09-10 01:14 UTC
+----------------------------
+
+  * I/O utilization is now reported correctly when multiple
+    MogileFS devices share the same local filesystem
+
+  * attempt to reduce client-side syscalls on low-latency networks
+    with TCP_NOPUSH/TCP_CORK
+
+  * remove a tiny chance of starvation when sharing work between threads
+    while improving theoretical fairness
+
+  * minor code cleanups and gnulib updates
+
+  * acceptor threads push directly into the event queue to avoid
+    poorly-defined TCP_DEFER_ACCEPT/accept filter semantics
+
+  * acceptor threads no longer touch the FS, so they are now scaled
+    to CPU count, not filesystem count
+
+  * absolute URIs are now supported in HTTP/1.1 requests
+
+0.4.0 / 2012-05-19 00:37 UTC
+----------------------------
+
+  * The kqueue code path now requires no more syscalls than the epoll
+    code path on *BSDs.
+
+  * avoids malloc() usage after fork() (for iostat(1)).  This works
+    around some malloc() implementations which fail to reinitialize
+    malloc locks after fork().
+
+  * iostat(1) is no longer spawned for HTTP-only deployments.
+
+  * usage files are no longer created in HTTP-only deployments.
+
+  * FIONBIO + ioctl() is no longer required, we'll fall back to the
+    slower (but POSIX) fcntl() equivalent if FIONBIO isn't available.
+
+  * Testers without native epoll or kqueue support, the the current
+    stable branch of libkqueue (r549) should work as should future
+    releases.
+    - svn://mark.heily.com/libkqueue/branches/stable
+    - http://mark.heily.com/project/libkqueue
+
+  Users on GNU/Linux should notice no changes from the last release
+  unless they're using HTTP-only.
+
+  I look forward to hearing from our first GNU/Hurd users!
+
+0.3.0 / 2012-03-27 01:13 UTC
+----------------------------
+
+  This release adds support for SHA-1 digests over the sidechannel.
+  There are also minor cleanups to signal handling.
+
+0.2.2 / 2012-03-20 01:42 UTC
+----------------------------
+
+  This release fixes build errors on glibc 2.5 - 2.9 where
+  _ATFILE_SOURCE is required and defined by _GNU_SOURCE.
+
+0.2.1 / 2012-03-20 00:58 UTC
+----------------------------
+
+  This release fixes build errors on FreeBSD and Debian GNU/kFreeBSD
+  systems.  There are also minor, inconsequential cleanups but
+  no other changes.  GNU/Linux users may not notice any difference
+  between this release and 0.2.0.
+
+0.2.0 / 2012-03-17 23:36 UTC
+----------------------------
+
+  * Graceful shutdown support (via SIGQUIT).  This prevents process
+    termination from breaking outstanding requests but will drop
+    idle, persistent HTTP connections.  cmogstored stops accepting
+    new connections ASAP, so it's possible to start a new cmogstored
+    process (or switch back to regular Perl mogstored) almost
+    immediately after sending SIGQUIT.
+
+  * PUT creates missing directories (except for the toplevel, like
+    mogstored).  MKCOL is now disabled, as forcing PUT to create
+    missing directories speeds up "create_close" in MogileFS as the
+    tracker no longer has to ensure directories exist.
+
+  * Active clients have thread affinity, this prevents per-client data
+    structures from ping-ponging between cores and caches.
+    Idle clients that become active still retain the ability
+    to migrate to _any_ idle thread and stay on it as long as it's
+    active and there are free threads for other clients.
+
+  * MD5 + fsck scheduling improvements for checksums testers.
+    This limits fsck MD5 requests to one per-device.  A similar
+    patch is also included with the proposed checksum extensions
+    to MogileFS.  On Linux systems using the CFQ I/O scheduler,
+    we drop the IO priority temporarily in an effort to prevent
+    fsck traffic from impacting normal traffic.
+
+  * Removed hard-to-test/support ENOSYS fallback support.  Building
+    cmogstored is easy, so fully-supporting ENOSYS fallbacks is too
+    much maintenance/testing overhead.
+
+  * PUT uses a temporary file so incomplete files are not left on
+    the filesystem.  Likewise, Content-MD5 rejections won't leave
+    files on the filesystem, either.
+
+  There are also some experimental features (not in Perl mogstored)
+  documented only in git commit messages.  These features which may
+  be removed, changed, or renamed in the future.  See "git log" for
+  full details and rely on them at your own risk.
+
+0.1.0 / 2012-02-12 09:45 UTC
+----------------------------
+
+  cmogstored now supports enough HTTP to support MogileFS entirely.  If
+  you're willing to live on the bleeding edge, a single executable is now
+  all that's needed to run a MogileFS storage node.
+
+  HTTP features supported include pipelining, persistent connections,
+  chunked PUT, partial PUT, partial GET, and Content-MD5 handling.
+
+  Graceful shutdown/hot upgrades is not supported yet, so it's recommended
+  you mark storage nodes "down" with mogadm before shutting down/upgrading
+  cmogstored (you should probably do that regardless).
+
+  While GNU/Linux systems with epoll+NPTL remain the platform of choice,
+  this release is also tested on FreeBSD 9.0 and Debian GNU/kFreeBSD 6.0.
+
+  FreeBSD 8.x and other *BSDs are likely to work, too.
+
+  There were no fatal bugs found in 0.0.0, but this release (with HTTP
+  support) is much more complex, so there may still be fatal bugs in
+  it.
+
+0.0.0 / 2012-01-12 03:39 UTC
+----------------------------
+
+  This release supports the mgmt commands (aka "mogstored_stream_port" on
+  Linux 2.6 systems for now.  This will support (enough of) DAV and
+  FreeBSD 8+ systems in the future.

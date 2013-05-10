@@ -1,0 +1,7 @@
+We depend on headers common to *BSDs but not standardized in POSIX.
+GNU/Linux distributions sometimes package these headers, but they
+are sometimes out-of-date and missing macros we rely on.
+
+All headers in this (bsd/) directory are under their respective
+(3-clause BSD) license and not covered by the GPL that applies
+to the rest of cmogstored.

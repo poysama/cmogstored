@@ -1,0 +1,88 @@
+cmogstored - alternative mogstored implementation for MogileFS
+--------------------------------------------------------------
+
+cmogstored is an alternative implementation of the "mogstored" storage
+component of MogileFS.  cmogstored is implemented in C and does not use
+Perl at runtime.  cmogstored is the only component you need to install
+on a MogileFS storage node.
+
+Read more about MogileFS here: http://mogilefs.org/
+cmogstored is not directly affiliated with the MogileFS project
+nor any commercial interests behind MogileFS.
+
+Features
+========
+
+* low memory footprint, more memory for file system caches
+* multithreaded design[1] keeps queues in rotational disks busy
+* epoll/kqueue used to cheaply maintain persistent connections
+* supports checksumming features in MogileFS::Server 2.60+
+* easily installable on modern GNU/Linux and FreeBSD without Perl
+* supports HTTP/1.1 persistent connections and pipelining
+* supports chunked and partial (Content-Range) HTTP/1.1 PUT requests
+* supports partial GET requests
+* may reject PUTs based on Content-MD5 header/trailer verification
+* graceful shutdown via SIGQUIT will not terminate active requests
+* extensive test suite, code coverage and Valgrind-tested
+
+Getting Started
+===============
+
+See the INSTALL document for installation and runtime requirements.
+
+cmogstored aims to be mostly command-line and configuration-file
+compatible with the Perl mogstored.
+
+cmogstored does not support spawning lighttpd/Apache instances like its
+Perl counterpart.
+
+In other cases, you can simply replace "mogstored" with "cmogstored"
+in your init scripts and use the same config file.
+
+
+Contact
+=======
+
+For any and all questions, bug reports, patches, pull requests,
+send plain-text email to: Eric Wong <normalperson@yhbt.net>
+We may also piggy-back onto the public MogileFS mailing list:
+<mogile@googlegroups.com> for public discussions.
+
+Downloads
+=========
+
+Source tarballs suitable for distribution are housed here:
+
+* http://bogomips.org/cmogstored/files/
+
+Latest is http://bogomips.org/cmogstored/files/cmogstored-1.2.1.tar.gz
+
+Source code
+===========
+
+* git clone git://bogomips.org/cmogstored.git
+* cgit :: http://bogomips.org/cmogstored.git
+* gitweb :: http://repo.or.cz/w/cmogstored.git
+
+License
+=======
+
+cmogstored is licensed under the GNU General Public License, v3 (or later).
+Distribution tarballs include LGPL code from the Gnulib project in lib/.
+The bsd/*.h compatibility headers are BSD-licensed.
+The nostd/* files are Expat/MIT-licensed from the libnostd project
+Contributors retain their copyrights to their respective contributions.
+
+This project is not affiliated with the GNU project nor FSF even though
+we use their tools and licenses.
+
+Homepage
+========
+
+Eric Wong hates pretty things, so this README file is also the homepage:
+http://bogomips.org/cmogstored/README
+
+The latest releases are announced via Atom feed:
+http://bogomips.org/cmogstored/NEWS.atom.xml
+
+[1] http://bogomips.org/cmogstored/queues.txt

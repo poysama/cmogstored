@@ -1,0 +1,3 @@
+#!/bin/sh -u
+# This file is auto-generated with: test/gen-slow.sh test/http_chunked_put.rb
+exec "$RUBY" -I"$top_srcdir" -w "$top_srcdir"/test/http_chunked_put.rb -n test_pipelined_slow
