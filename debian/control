@@ -1,0 +1,37 @@
+Source: cmogstored
+Section: main
+Priority: optional
+Maintainer: Jesus Roncero <jesus@we7.com>
+Build-Depends: debhelper (>= 8), autotools-dev, ragel, gnulib (>= 20120404), help2man, autoconf, automake, hardening-wrapper, mime-support, mawk, ruby, sysstat
+Standards-Version: 3.8.4
+Homepage: http://bogomips.org/cmogstored
+#Vcs-Git: git://git.debian.org/collab-maint/cmogstored.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/cmogstored.git;a=summary
+
+Package: cmogstored
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Alternative mogstored implementation for MogileFS
+ cmogstored is an alternative implementation of the "mogstored" storage
+ component of MogileFS.  cmogstored is implemented in C and does not use
+ Perl at runtime.  cmogstored is the only component you need to install
+ on a MogileFS storage node.
+ .
+ Read more about MogileFS here: http://mogilefs.org/
+ cmogstored is not directly affiliated with the MogileFS project
+ nor any commercial interests behind MogileFS.
+ .
+ Features
+ ========
+ .
+ * low memory footprint, more memory for file system caches
+ * multithreaded design[1] keeps queues in rotational disks busy
+ * epoll/kqueue used to cheaply maintain persistent connections
+ * supports checksumming features in MogileFS::Server 2.60+
+ * easily installable on modern GNU/Linux and FreeBSD without Perl
+ * supports HTTP/1.1 persistent connections and pipelining
+ * supports chunked and partial (Content-Range) HTTP/1.1 PUT requests
+ * supports partial GET requests
+ * may reject PUTs based on Content-MD5 header/trailer verification
+ * graceful shutdown via SIGQUIT will not terminate active requests
+ * extensive test suite, code coverage and Valgrind-tested

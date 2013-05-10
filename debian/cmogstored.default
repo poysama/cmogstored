@@ -1,0 +1,10 @@
+# Defaults for cmogstored initscript
+# sourced by /etc/init.d/cmogstored
+# installed at /etc/default/cmogstored by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+
+# Additional options that are passed to the Daemon.
+DAEMON_OPTS=""

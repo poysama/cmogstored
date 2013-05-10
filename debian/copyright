@@ -1,0 +1,38 @@
+This work was packaged for Debian by:
+
+    Jesus Roncero <jesus@we7.com> on Wed, 08 May 2013 14:15:46 +0000
+
+It was downloaded from:
+
+    http://bogomips.org/cmogstored/
+
+Upstream Author(s):
+
+    Eric Wong <normalperson@yhbt.net>
+
+Copyright:
+
+    Copyright (C) 2013 Eric Wong
+
+License:
+
+    GNU General Public License v3.
+    Distribution tarballs include LGPL code from the Gnulib project in lib/.
+    The bsd/*.h compatibility headers are BSD-licensed.
+    The nostd/* files are Expat/MIT-licensed from the libnostd project
+
+The Debian packaging is:
+
+    Copyright (C) 2013 Jesus Roncero <jesus@we7.com>
+
+# Please chose a license for your packaging work. If the program you package
+# uses a mainstream license, using the same license is the safest choice.
+# Please avoid to pick license terms that are more restrictive than the
+# packaged work, as it may make Debian's contributions unacceptable upstream.
+# If you just want it to be GPL version 3, leave the following lines in.
+
+and is licensed under the GPL version 3,
+see "/usr/share/common-licenses/GPL-3".
+
+# Please also look if there are files or directories which have a
+# different copyright/license attached and list them here.
